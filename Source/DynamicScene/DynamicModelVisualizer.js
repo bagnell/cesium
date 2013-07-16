@@ -226,7 +226,7 @@ define([
         }
 
         if (typeof position !== 'undefined' && typeof orientation !== 'undefined' && (!position.equals(model._visualizerPosition) || !orientation.equals(model._visualizerOrientation))) {
-            Matrix4.fromRotationTranslation(Matrix3.fromQuaternion(orientation.conjugate(orientation), matrix3Scratch), position, model.modelMatrix);
+            Matrix4.fromRotationTranslation(Matrix3.fromQuaternion(orientation, matrix3Scratch), position, model.modelMatrix);
             model._visualizerPosition = position.clone(model._visualizerPosition);
             model._visualizerOrientation = orientation.clone(model._visualizerOrientation);
         }
