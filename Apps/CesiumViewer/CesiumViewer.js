@@ -3,6 +3,8 @@ define([
         'DynamicScene/CzmlDataSource',
         'DynamicScene/GeoJsonDataSource',
         'Scene/PerformanceDisplay',
+        'Scene/CesiumTerrainProvider',
+        'Scene/TileMapServiceImageryProvider',
         'Widgets/checkForChromeFrame',
         'Widgets/Viewer/Viewer',
         'Widgets/Viewer/viewerDragDropMixin',
@@ -12,6 +14,8 @@ define([
         CzmlDataSource,
         GeoJsonDataSource,
         PerformanceDisplay,
+        CesiumTerrainProvider,
+        TileMapServiceImageryProvider,
         checkForChromeFrame,
         Viewer,
         viewerDragDropMixin,
@@ -25,6 +29,8 @@ define([
      * 'source' : 'file.czml',  // The relative URL of the CZML file to load at startup.
      * 'stats'  : true,         // Enable the FPS performance display.
      * 'theme'  : 'lighter',    // Use the dark-text-on-light-background theme.
+     * 'terrainUrl' : undefined           //url for CesiumTerrainProvider
+     * 'imageryUrl' : undefined          //url for ImageryProvider
      */
     var endUserOptions = {};
     var queryString = window.location.search.substring(1);
@@ -59,7 +65,21 @@ define([
     }
 
     function startup() {
-        var viewer = new Viewer('cesiumContainer');
+        var viewerOptions = {};
+        if (typeof endUserOptions.terrainUrl !== 'undefined') {
+            viewerOptions.terrainProvider = new CesiumTerrainProvider({
+                url : endUserOptions.terrainUrl
+            });
+        }
+
+        if (typeof endUserOptions.imageryUrl !== 'undefined') {
+            viewerOptions.baseLayerPicker = false;
+            viewerOptions.imageryProvider = new TileMapServiceImageryProvider({
+                url : endUserOptions.imageryUrl
+            });
+        }
+
+        var viewer = new Viewer('cesiumContainer', viewerOptions);
         viewer.extend(viewerDragDropMixin);
         viewer.extend(viewerDynamicObjectMixin);
 
