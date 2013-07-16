@@ -15,7 +15,7 @@
     "availability":"2010-12-08T16:59:30Z/2010-12-08T17:22:26.7907302876993Z",
     "model":{
      "uri":{
-       "gltf":"duck/duck.json"
+       "gltf":"f-35_jsf_cv/f-35_jsf_cv.json"
      },
      "scale":1.0,
      "show":true
@@ -2404,7 +2404,7 @@
     "availability":"2010-12-08T16:59:40Z/2010-12-08T17:22:39.1303815127503Z",
     "model":{
      "uri":{
-       "gltf":"duck/duck.json"
+       "gltf":"f-35_jsf_cv/f-35_jsf_cv.json"
      },
      "scale":1.0,
      "show":true

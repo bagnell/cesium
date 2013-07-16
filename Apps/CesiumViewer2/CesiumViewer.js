@@ -157,12 +157,13 @@ define([
 //      var url = './Gallery/model/SuperMurdoch/SuperMurdoch.json';
 //      var url = './Gallery/model/rambler/Rambler.json';
 //      var url = './Gallery/model/wine/wine.json';
-        var url = './Gallery/model/duck/duck.json';
+//      var url = './Gallery/model/duck/duck.json';
+      var url = './Gallery/model/f-35_jsf_cv/f-35_jsf_cv.json';
 
-        scene.getPrimitives().add(Model.fromText({
+      scene.getPrimitives().add(Model.fromText({
             url : url,
           modelMatrix : Matrix4.fromTranslation(new Cartesian3(0.0, 0.0, 6000000.0)),
-          scale : 10000.0
+          scale : 100000.0
 //          debugShowBoundingVolume : true
         }));
 
