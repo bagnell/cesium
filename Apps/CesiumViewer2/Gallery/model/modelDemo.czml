@@ -21,6 +21,11 @@
      "show":true
     },
     "label":{
+      "eyeOffset":{
+        "cartesian":[
+          0.0,0.0,-50.0
+        ]
+      },
       "fillColor":[
         {
           "interval":"2013-07-16T20:00:00Z/2013-07-16T20:22:00Z",
@@ -2405,6 +2410,11 @@
      "show":true
     },
     "label":{
+      "eyeOffset":{
+        "cartesian":[
+          0.0,0.0,-50.0
+        ]
+      },
       "fillColor":[
         {
           "interval":"2013-07-16T20:00:00Z/2013-07-16T20:22:00Z",
