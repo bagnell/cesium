@@ -59,10 +59,15 @@ define([
 
         function pickAndTrackObject(e) {
             var pickedPrimitive = viewer.scene.pick(e.position);
-            if (typeof pickedPrimitive !== 'undefined' &&
-                typeof pickedPrimitive.dynamicObject !== 'undefined' &&
-                typeof pickedPrimitive.dynamicObject.position !== 'undefined') {
-                viewer.trackedObject = pickedPrimitive.dynamicObject;
+            if (typeof pickedPrimitive !== 'undefined') {
+                if (typeof pickedPrimitive.dynamicObject !== 'undefined' &&
+                    typeof pickedPrimitive.dynamicObject.position !== 'undefined') {
+                    viewer.trackedObject = pickedPrimitive.dynamicObject;
+                } else if (typeof pickedPrimitive.instance !== 'undefined' &&
+                           typeof pickedPrimitive.instance.dynamicObject !== 'undefined' &&
+                           typeof pickedPrimitive.instance.dynamicObject.position !== 'undefined') {
+                    viewer.trackedObject = pickedPrimitive.instance.dynamicObject;
+                }
             }
         }
 
