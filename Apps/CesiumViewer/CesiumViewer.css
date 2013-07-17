@@ -36,3 +36,15 @@ body {
     background-repeat: no-repeat;
     background-image: url(Images/ajax-loader.gif);
 }
+
+#webGlLogo {
+    display: block;
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    width: 82px;
+    height: 38px;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-image: url(Images/WebGL_logo.png);
+}

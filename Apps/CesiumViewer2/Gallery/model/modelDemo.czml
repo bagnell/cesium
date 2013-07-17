@@ -13,6 +13,11 @@
   {
     "id":"/Application/STK/Scenario/LoopingFighterWithWingman/Aircraft/Leader",
     "availability":"2013-07-16T20:00:00Z/2013-07-16T20:22:56.0876200567691Z",
+    "viewFrom":{
+        "cartesian":[
+          -100.0, -50.0, 25.0
+        ]
+      },
     "model":{
      "uri":{
        "gltf":"f-35_jsf_cv/f-35_jsf_cv.json"
@@ -2402,6 +2407,11 @@
   {
     "id":"/Application/STK/Scenario/LoopingFighterWithWingman/Aircraft/Wingman",
     "availability":"2013-07-16T20:00:10Z/2013-07-16T20:23:08.37971238782848Z",
+    "viewFrom":{
+        "cartesian":[
+          -100.0, -50.0, 25.0
+        ]
+      },
     "model":{
      "uri":{
        "gltf":"f-35_jsf_cv/f-35_jsf_cv.json"
