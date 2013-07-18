@@ -80,15 +80,17 @@ define([
 
         if (typeof endUserOptions.imageryUrl !== 'undefined') {
             viewerOptions.baseLayerPicker = false;
+            var isGeographic = typeof endUserOptions.imageryIsGeographic === 'undefined' ||
+                               endUserOptions.imageryIsGeographic === 'true';
             if (endUserOptions.imageryIsOpenStreetMaps === 'true') {
                 viewerOptions.imageryProvider = new OpenStreetMapImageryProvider({
                     url : endUserOptions.imageryUrl,
-                    tilingScheme : endUserOptions.imageryIsGeographic === 'true' ? new GeographicTilingScheme() : new WebMercatorTilingScheme()
+                    tilingScheme : isGeographic ? new GeographicTilingScheme() : new WebMercatorTilingScheme()
                 });
             } else {
                 viewerOptions.imageryProvider = new TileMapServiceImageryProvider({
                     url : endUserOptions.imageryUrl,
-                    tilingScheme : endUserOptions.imageryIsGeographic === 'true' ? new GeographicTilingScheme() : new WebMercatorTilingScheme()
+                    tilingScheme : isGeographic ? new GeographicTilingScheme() : new WebMercatorTilingScheme()
                 });
             }
         }
