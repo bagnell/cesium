@@ -140,7 +140,7 @@ float waveFade(float edge0, float edge1, float x)
 // Based on water rendering by Jonas Wagner:
 // http://29a.ch/2012/7/19/webgl-terrain-rendering-water-fog
 
-const float oceanFrequency = 125000.0;
+const float oceanFrequency = 250000.0;
 const float oceanAnimationSpeed = 0.006;
 const float oceanAmplitude = 2.0;
 const float oceanSpecularIntensity = 0.5;

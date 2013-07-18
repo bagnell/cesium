@@ -4,7 +4,10 @@ define([
         'DynamicScene/GeoJsonDataSource',
         'Scene/PerformanceDisplay',
         'Scene/CesiumTerrainProvider',
+        'Scene/GeographicTilingScheme',
+        'Scene/OpenStreetMapImageryProvider',
         'Scene/TileMapServiceImageryProvider',
+        'Scene/WebMercatorTilingScheme',
         'Widgets/checkForChromeFrame',
         'Widgets/Viewer/Viewer',
         'Widgets/Viewer/viewerDragDropMixin',
@@ -15,7 +18,10 @@ define([
         GeoJsonDataSource,
         PerformanceDisplay,
         CesiumTerrainProvider,
+        GeographicTilingScheme,
+        OpenStreetMapImageryProvider,
         TileMapServiceImageryProvider,
+        WebMercatorTilingScheme,
         checkForChromeFrame,
         Viewer,
         viewerDragDropMixin,
@@ -74,9 +80,17 @@ define([
 
         if (typeof endUserOptions.imageryUrl !== 'undefined') {
             viewerOptions.baseLayerPicker = false;
-            viewerOptions.imageryProvider = new TileMapServiceImageryProvider({
-                url : endUserOptions.imageryUrl
-            });
+            if (endUserOptions.imageryIsOpenStreetMaps === 'true') {
+                viewerOptions.imageryProvider = new OpenStreetMapImageryProvider({
+                    url : endUserOptions.imageryUrl,
+                    tilingScheme : endUserOptions.imageryIsGeographic === 'true' ? new GeographicTilingScheme() : new WebMercatorTilingScheme()
+                });
+            } else {
+                viewerOptions.imageryProvider = new TileMapServiceImageryProvider({
+                    url : endUserOptions.imageryUrl,
+                    tilingScheme : endUserOptions.imageryIsGeographic === 'true' ? new GeographicTilingScheme() : new WebMercatorTilingScheme()
+                });
+            }
         }
 
         var viewer = new Viewer('cesiumContainer', viewerOptions);
