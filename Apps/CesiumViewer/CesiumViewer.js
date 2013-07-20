@@ -110,10 +110,10 @@ define([
         viewer.extend(viewerDragDropMixin);
         viewer.extend(viewerDynamicObjectMixin);
         
-        var imagery = viewer.centralBody.getImageryLayers();
-        imagery.addImageryProvider(new TileMapServiceImageryProvider({
-            url : 'http://localhost:8080/globedata/oc'
-        }));
+		var imagery = viewer.centralBody.getImageryLayers();
+		imagery.addImageryProvider(new TileMapServiceImageryProvider({
+			url : 'http://localhost:8080/globedata/oc'
+		}));
 
         viewer.onRenderLoopError.addEventListener(function(viewerArg, error) {
             console.log(error);
