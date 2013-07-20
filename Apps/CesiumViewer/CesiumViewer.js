@@ -72,13 +72,24 @@ define([
 
     function startup() {
         var viewerOptions = {};
-        if (typeof endUserOptions.terrainUrl !== 'undefined') {
-            viewerOptions.terrainProvider = new CesiumTerrainProvider({
-                url : endUserOptions.terrainUrl
-            });
-        }
-
-        if (typeof endUserOptions.imageryUrl !== 'undefined') {
+		
+		if (typeof endUserOptions.terrainUrl === 'undefined' && endUserOptions.offlineMode === 'true') {
+			endUserOptions.terrainUrl = 'http://localhost:8080/globedata/smallterrain'
+		}
+		
+		if (typeof endUserOptions.terrainUrl !== 'undefined') {
+    		viewerOptions.terrainProvider = new CesiumTerrainProvider({
+            	url : endUserOptions.terrainUrl
+       		});
+		}
+	
+		if (typeof endUserOptions.imageryUrl === 'undefined' && endUserOptions.offlineMode === 'true') {
+        	viewerOptions.imageryProvider = new TileMapServiceImageryProvider({
+        		url : 'http://localhost:8080/globedata/imagery',
+				credit : 'Imagery data courtesy VT MÄK'
+        	});
+			viewerOptions.baseLayerPicker = false;
+		} else if (typeof endUserOptions.imageryUrl !== 'undefined') {
             viewerOptions.baseLayerPicker = false;
             var isGeographic = typeof endUserOptions.imageryIsGeographic === 'undefined' ||
                                endUserOptions.imageryIsGeographic === 'true';
@@ -94,10 +105,15 @@ define([
                 });
             }
         }
-
+		
         var viewer = new Viewer('cesiumContainer', viewerOptions);
         viewer.extend(viewerDragDropMixin);
         viewer.extend(viewerDynamicObjectMixin);
+		
+		var imagery = viewer.centralBody.getImageryLayers();
+		imagery.addImageryProvider(new TileMapServiceImageryProvider({
+			url : 'http://localhost:8080/globedata/oc'
+		}));
 
         viewer.onRenderLoopError.addEventListener(function(viewerArg, error) {
             console.log(error);
