@@ -7,6 +7,8 @@ define([
         '../Core/Cartesian2',
         '../Core/Matrix4',
         '../Core/writeTextToCanvas',
+        '../Core/ObjectOrientedBoundingBox',
+        '../Core/BoundingRectangle',
         './BillboardCollection',
         './Label',
         './LabelStyle',
@@ -20,6 +22,8 @@ define([
         Cartesian2,
         Matrix4,
         writeTextToCanvas,
+        ObjectOrientedBoundingBox,
+        BoundingRectangle,
         BillboardCollection,
         Label,
         LabelStyle,
@@ -84,6 +88,7 @@ define([
             glyph.billboard = undefined;
         }
     }
+
 
     function rebindAllGlyphs(labelCollection, label) {
         var text = label._text;
@@ -197,7 +202,8 @@ define([
 
     // reusable Cartesian2 instance
     var glyphPixelOffset = new Cartesian2();
-
+    //reusable BoundingRectangle instance
+    var scratchBoundingRectangle = new BoundingRectangle();
     function repositionAllGlyphs(label) {
         var glyphs = label._glyphs;
         var glyph;
@@ -213,6 +219,11 @@ define([
             totalWidth += dimensions.width;
             maxHeight = Math.max(maxHeight, dimensions.height);
         }
+        scratchBoundingRectangle.width = totalWidth;
+        scratchBoundingRectangle.height = maxHeight;
+        scratchBoundingRectangle.x = label.getPosition().x;
+        scratchBoundingRectangle.y = label.getPosition().y;
+        ObjectOrientedBoundingBox.fromBoundingRectangle(scratchBoundingRectangle, 0.0, label._orientedBoundingBox);
 
         var scale = label._scale;
         var horizontalOrigin = label._horizontalOrigin;

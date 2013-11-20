@@ -7,6 +7,7 @@ define([
         '../Core/Color',
         '../Core/defined',
         '../Core/NearFarScalar',
+        '../Core/ObjectOrientedBoundingBox',
         './Billboard',
         './LabelStyle',
         './HorizontalOrigin',
@@ -19,6 +20,7 @@ define([
         Color,
         defined,
         NearFarScalar,
+        ObjectOrientedBoundingBox,
         Billboard,
         LabelStyle,
         HorizontalOrigin,
@@ -78,6 +80,7 @@ define([
         this._scale = defaultValue(options.scale, 1.0);
         this._id = options.id;
         this._translucencyByDistance = options.translucencyByDistance;
+        this._orientedBoundingBox = new ObjectOrientedBoundingBox();
 
         this._labelCollection = labelCollection;
         this._glyphs = [];
