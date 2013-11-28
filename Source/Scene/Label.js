@@ -77,10 +77,14 @@ define([
         this._pixelOffset = Cartesian2.clone(defaultValue(options.pixelOffset, Cartesian2.ZERO));
         this._eyeOffset = Cartesian3.clone(defaultValue(options.eyeOffset, Cartesian3.ZERO));
         this._position = Cartesian3.clone(defaultValue(options.position, Cartesian3.ZERO));
+        this._originalPosition = Cartesian3.clone(defaultValue(options.position, Cartesian3.ZERO));
+        this._width = 0.0;
+        this._height = 0.0;
         this._scale = defaultValue(options.scale, 1.0);
         this._id = options.id;
         this._translucencyByDistance = options.translucencyByDistance;
         this._orientedBoundingBox = new ObjectOrientedBoundingBox();
+        this._priority = defaultValue(options.priority, 5);
 
         this._labelCollection = labelCollection;
         this._glyphs = [];

@@ -5,6 +5,7 @@ define([
         '../Core/defined',
         '../Core/destroyObject',
         '../Core/Cartesian2',
+        '../Core/Cartesian3',
         '../Core/Matrix4',
         '../Core/writeTextToCanvas',
         '../Core/ObjectOrientedBoundingBox',
@@ -13,13 +14,15 @@ define([
         './Label',
         './LabelStyle',
         './HorizontalOrigin',
-        './VerticalOrigin'
+        './VerticalOrigin',
+        '../Scene/SceneTransforms',
     ], function(
         defaultValue,
         DeveloperError,
         defined,
         destroyObject,
         Cartesian2,
+        Cartesian3,
         Matrix4,
         writeTextToCanvas,
         ObjectOrientedBoundingBox,
@@ -28,7 +31,8 @@ define([
         Label,
         LabelStyle,
         HorizontalOrigin,
-        VerticalOrigin) {
+        VerticalOrigin,
+        SceneTransforms) {
     "use strict";
 
     // A glyph represents a single character in a particular label.  It may or may
@@ -202,8 +206,6 @@ define([
 
     // reusable Cartesian2 instance
     var glyphPixelOffset = new Cartesian2();
-    //reusable BoundingRectangle instance
-    var scratchBoundingRectangle = new BoundingRectangle();
     function repositionAllGlyphs(label) {
         var glyphs = label._glyphs;
         var glyph;
@@ -219,11 +221,9 @@ define([
             totalWidth += dimensions.width;
             maxHeight = Math.max(maxHeight, dimensions.height);
         }
-        scratchBoundingRectangle.width = totalWidth;
-        scratchBoundingRectangle.height = maxHeight;
-        scratchBoundingRectangle.x = label.getPosition().x;
-        scratchBoundingRectangle.y = label.getPosition().y;
-        ObjectOrientedBoundingBox.fromBoundingRectangle(scratchBoundingRectangle, 0.0, label._orientedBoundingBox);
+
+        label._width = totalWidth;
+        label._height = maxHeight;
 
         var scale = label._scale;
         var horizontalOrigin = label._horizontalOrigin;
@@ -267,6 +267,65 @@ define([
         }
         label._labelCollection = undefined;
         destroyObject(label);
+    }
+
+    function sortLabelsByPriority(labels) {
+        return labels.sort(function(a,b) {
+            return b._priority-a._priority;
+        });
+    };
+
+    function collides(label, indexInCollection) {
+        var i=0;
+        for (i=0;i<indexInCollection;++i) {
+            if (ObjectOrientedBoundingBox.intersect(label._orientedBoundingBox, label._labelCollection._labels[i]._orientedBoundingBox)) {
+               return true;
+            }
+        }
+        return false;
+    }
+    var scratchPosition = new Cartesian3();
+    var scratch2Dposition = new Cartesian2();
+    function checkAndSetPosition(label, indexInCollection) { //first move the OOB then the Label
+        var radius=12;
+        var h = label._orientedBoundingBox.translation.x;
+        var k = label._orientedBoundingBox.translation.y;
+        var xPos = h;
+        var yPos = k;
+        var myPos = k;
+        var shift=0;
+        var MAXTRYNUM=20;
+        var i;
+
+        for (i=0;i<MAXTRYNUM;++i) {
+            xPos = (h-radius)+shift*radius/3; //TODO we should start from up to optimize, because usually width>height
+            yPos = Math.sqrt(Math.abs(radius*radius-xPos*xPos))+k; //up half side of the circle
+            myPos = -(Math.sqrt(Math.abs(radius*radius-xPos*xPos)))+k; //down half side of the circle
+            if (xPos>=h+radius*2) {
+                radius+=12;
+                shift=0;
+            } else {
+                ++shift;
+            }
+
+            label._orientedBoundingBox.translation.x = xPos;
+            label._orientedBoundingBox.translation.y = yPos;
+            if (!collides(label, indexInCollection)) {//check on the up half side of the circle
+                scratch2Dposition.x = xPos;
+                scratch2Dposition.y = yPos;
+                break;
+            }
+            label._orientedBoundingBox.translation.y = myPos+label._height/2;
+            if (!collides(label, indexInCollection)) {//check on the down half side of the circle
+                scratch2Dposition.x = xPos;
+                scratch2Dposition.y = yPos;
+                break;
+            }
+
+        }
+        //scratchPosition = SceneTransforms.windowCoordinatesTowgs84(scene, scratch2Dposition);//TODO Convert back to Cartesian
+        scratchPosition.z = label._position.z;
+        label.setPosition(scratchPosition);
     }
 
     /**
@@ -426,6 +485,8 @@ define([
         this._labels.push(label);
         this._labelsToUpdate.push(label);
 
+        sortLabelsByPriority(this._labels);
+
         return label;
     };
 
@@ -579,6 +640,8 @@ define([
         return this._labels.length;
     };
 
+    //reusable instance
+    var scratchBoundingRectangle = new BoundingRectangle();
     /**
      * @private
      */
@@ -612,9 +675,28 @@ define([
                 label._repositionAllGlyphs = false;
             }
 
+            scratchBoundingRectangle.width = label._width;
+            scratchBoundingRectangle.height = label._height;
+
+            //SceneTransforms.wgs84ToWindowCoordinates(scene, label._originalPosition, scratch2Dposition); //TODO get the scene
+            scratchBoundingRectangle.x = scratch2Dposition.x;
+            scratchBoundingRectangle.y = scratch2Dposition.y;
+
+            ObjectOrientedBoundingBox.fromBoundingRectangle(scratchBoundingRectangle, 0.0, label._orientedBoundingBox);
+
             var glyphCountDifference = label._glyphs.length - preUpdateGlyphCount;
             this._totalGlyphCount += glyphCountDifference;
         }
+
+        var labels = this._labels;
+        for ( var i = 0, len = labels.length; i < len; ++i) {
+            var label = labels[i];
+            //SceneTransforms.wgs84ToWindowCoordinates(context, label._originalPosition, scratch2Dposition); //TODO get the scene
+            label._orientedBoundingBox.translation.x = scratch2Dposition.x+label._width/2;
+            label._orientedBoundingBox.translation.y = scratch2Dposition.y+label._height/2;
+            checkAndSetPosition(label, i);
+        }
+
         labelsToUpdate.length = 0;
 
         billboardCollection.update(context, frameState, commandList);
