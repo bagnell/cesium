@@ -290,35 +290,33 @@ define([
         var radius=12;
         var h = label._orientedBoundingBox.translation.x;
         var k = label._orientedBoundingBox.translation.y;
-        var xPos = h;
-        var yPos = k;
         var myPos = k;
         var shift=0;
         var MAXTRYNUM=20;
         var i;
 
+        scratch2Dposition.x = h;
+        scratch2Dposition.y = k;
+
         for (i=0;i<MAXTRYNUM;++i) {
-            xPos = (h-radius)+shift*radius/3; //TODO we should start from up to optimize, because usually width>height
-            yPos = Math.sqrt(Math.abs(radius*radius-xPos*xPos))+k; //up half side of the circle
-            myPos = -(Math.sqrt(Math.abs(radius*radius-xPos*xPos)))+k; //down half side of the circle
-            if (xPos>=h+radius*2) {
+            scratch2Dposition.x = (h-radius)+shift*radius/3; //TODO we should start from up to optimize, because usually width>height
+            scratch2Dposition.y = Math.sqrt(Math.abs(radius*radius-scratch2Dposition.x*scratch2Dposition.x))+k; //up half side of the circle
+            myPos = -(Math.sqrt(Math.abs(radius*radius-scratch2Dposition.x*scratch2Dposition.x)))+k; //down half side of the circle
+
+            if (scratch2Dposition.x>=h+radius*2) {
                 radius+=12;
                 shift=0;
             } else {
                 ++shift;
             }
 
-            label._orientedBoundingBox.translation.x = xPos;
-            label._orientedBoundingBox.translation.y = yPos;
+            label._orientedBoundingBox.translation.x = scratch2Dposition.x;
+            label._orientedBoundingBox.translation.y = scratch2Dposition.y;
             if (!collides(label, indexInCollection)) {//check on the up half side of the circle
-                scratch2Dposition.x = xPos;
-                scratch2Dposition.y = yPos;
                 break;
             }
             label._orientedBoundingBox.translation.y = myPos+label._height/2;
             if (!collides(label, indexInCollection)) {//check on the down half side of the circle
-                scratch2Dposition.x = xPos;
-                scratch2Dposition.y = yPos;
                 break;
             }
 

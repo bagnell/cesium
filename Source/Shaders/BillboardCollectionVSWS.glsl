@@ -28,7 +28,8 @@ varying vec4 v_color;
 
 void main()
 {
-    vec3 positionWC = positionHigh;
+    vec2 textureCoordinates = textureCoordinatesAndImageSize.xy;
+    vec3 positionWC = positionHigh.xyz;
     float translucency = 1.0; //Later
     float scale = eyeOffsetAndScale.w;
     vec2 imageSize = textureCoordinatesAndImageSize.zw;
