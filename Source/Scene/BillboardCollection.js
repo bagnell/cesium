@@ -23,6 +23,7 @@ define([
         './Billboard',
         './HorizontalOrigin',
         '../Shaders/BillboardCollectionVS',
+        '../Shaders/BillboardCollectionVSWS',
         '../Shaders/BillboardCollectionFS'
     ], function(
         defined,
@@ -48,6 +49,7 @@ define([
         Billboard,
         HorizontalOrigin,
         BillboardCollectionVS,
+        BillboardCollectionVSWS,
         BillboardCollectionFS) {
     "use strict";
 
@@ -166,6 +168,8 @@ define([
         this._shaderTranslucencyByDistance = false;
         this._compiledShaderTranslucencyByDistance = false;
         this._compiledShaderTranslucencyByDistancePick = false;
+
+        this._screenPositionComputed = false; //this means, that the position contains a windows space position
 
         this._propertiesChanged = new Uint32Array(NUMBER_OF_PROPERTIES);
 
@@ -647,7 +651,7 @@ define([
         return usageChanged;
     };
 
-    function createVAF(context, numberOfBillboards, buffersUsage) {
+    function createVAF(context, numberOfBillboards, buffersUsage) { //TODO should we create a different VAF when the screen position is already calculated?
         // Different billboard collections share the same vertex buffer for directions.
         var directionVertexBuffer = getDirectionsVertexBuffer(context);
 
@@ -731,7 +735,6 @@ define([
     function writePosition(billboardCollection, context, textureAtlasCoordinates, vafWriters, billboard) {
         var i = billboard._index * 4;
         var position = billboard._getActualPosition();
-
         if (billboardCollection._mode === SceneMode.SCENE3D) {
             billboardCollection._baseVolume.expand(position, billboardCollection._baseVolume);
             billboardCollection._boundingVolumeDirty = true;
@@ -1248,7 +1251,7 @@ define([
                         defines : [this._shaderRotation ? 'ROTATION' : '',
                                    this._shaderScaleByDistance ? 'EYE_DISTANCE_SCALING' : '',
                                    this._shaderTranslucencyByDistance ? 'EYE_DISTANCE_TRANSLUCENCY' : ''],
-                        sources : [BillboardCollectionVS]
+                        sources : [this._screenPositionComputed ? BillboardCollectionVSWS : BillboardCollectionVS]
                     }),
                     BillboardCollectionFS,
                     attributeIndices);
@@ -1295,7 +1298,7 @@ define([
                                    this._shaderRotation ? 'ROTATION' : '',
                                    this._shaderScaleByDistance ? 'EYE_DISTANCE_SCALING' : '',
                                    this._shaderTranslucencyByDistance ? 'EYE_DISTANCE_TRANSLUCENCY' : ''],
-                        sources : [BillboardCollectionVS]
+                        sources : [this._screenPositionComputed ? BillboardCollectionVSWS : BillboardCollectionVS]
                     }),
                     createShaderSource({
                         defines : ['RENDER_FOR_PICK'],

@@ -185,7 +185,7 @@ define([
                     }
 
                     billboard.setShow(label._show);
-                    billboard.setPosition(label._position);
+                    billboard.setPosition(label._positionWS);
                     billboard.setEyeOffset(label._eyeOffset);
                     billboard.setHorizontalOrigin(HorizontalOrigin.LEFT);
                     billboard.setVerticalOrigin(label._verticalOrigin);
@@ -323,9 +323,8 @@ define([
             }
 
         }
-        //scratchPosition = SceneTransforms.windowCoordinatesTowgs84(scene, scratch2Dposition);//TODO Convert back to Cartesian
-        scratchPosition.z = label._position.z;
-        label.setPosition(scratchPosition);
+        label._positionWS.x = scratch2Dposition.x;
+        label._positionWS.y = scratch2Dposition.y;
     }
 
     /**
@@ -377,6 +376,7 @@ define([
 
         this._billboardCollection = new BillboardCollection();
         this._billboardCollection.setDestroyTextureAtlas(false);
+        this._billboardCollection._screenPositionComputed = true;
 
         this._spareBillboards = [];
         this._glyphTextureCache = {};
@@ -678,7 +678,7 @@ define([
             scratchBoundingRectangle.width = label._width;
             scratchBoundingRectangle.height = label._height;
 
-            //SceneTransforms.wgs84ToWindowCoordinates(scene, label._originalPosition, scratch2Dposition); //TODO get the scene
+            scratch2Dposition = label.computeScreenSpacePosition(context, frameState)
             scratchBoundingRectangle.x = scratch2Dposition.x;
             scratchBoundingRectangle.y = scratch2Dposition.y;
 
@@ -691,7 +691,7 @@ define([
         var labels = this._labels;
         for ( var i = 0, len = labels.length; i < len; ++i) {
             var label = labels[i];
-            //SceneTransforms.wgs84ToWindowCoordinates(context, label._originalPosition, scratch2Dposition); //TODO get the scene
+            scratch2Dposition = label.computeScreenSpacePosition(context, frameState)
             label._orientedBoundingBox.translation.x = scratch2Dposition.x+label._width/2;
             label._orientedBoundingBox.translation.y = scratch2Dposition.y+label._height/2;
             checkAndSetPosition(label, i);
