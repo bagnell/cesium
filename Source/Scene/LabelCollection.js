@@ -185,7 +185,7 @@ define([
                     }
 
                     billboard.setShow(label._show);
-                    billboard.setPosition(label._positionWS);
+                    billboard.setPosition(label._position);
                     billboard.setEyeOffset(label._eyeOffset);
                     billboard.setHorizontalOrigin(HorizontalOrigin.LEFT);
                     billboard.setVerticalOrigin(label._verticalOrigin);
@@ -297,7 +297,7 @@ define([
 
         scratch2Dposition.x = h;
         scratch2Dposition.y = k;
-
+        /*
         for (i=0;i<MAXTRYNUM;++i) {
             scratch2Dposition.x = (h-radius)+shift*radius/3; //TODO we should start from up to optimize, because usually width>height
             scratch2Dposition.y = Math.sqrt(Math.abs(radius*radius-scratch2Dposition.x*scratch2Dposition.x))+k; //up half side of the circle
@@ -320,9 +320,10 @@ define([
                 break;
             }
 
-        }
-        label._positionWS.x = scratch2Dposition.x;
-        label._positionWS.y = scratch2Dposition.y;
+        }*/
+        label._positionWS.x = 300;
+        label._positionWS.y = 300;
+        label.setPosition(label._positionWS);
     }
 
     /**

@@ -739,9 +739,9 @@ define([
             billboardCollection._baseVolume.expand(position, billboardCollection._baseVolume);
             billboardCollection._boundingVolumeDirty = true;
         }
-
-        EncodedCartesian3.fromCartesian(position, writePositionScratch);
-
+        if (!billboardCollection._screenPositionComputed) {
+            EncodedCartesian3.fromCartesian(position, writePositionScratch);
+        }
         var allPurposeWriters = vafWriters[allPassPurpose];
         var positionHighWriter = allPurposeWriters[attributeIndices.positionHigh];
         var high = writePositionScratch.high;
