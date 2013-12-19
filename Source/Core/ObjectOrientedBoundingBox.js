@@ -28,6 +28,16 @@ define([
      * @param {Cartesian3} [translation=Cartesian3.ZERO] The position of the box.
      * @param {Cartesian3} [scale=Cartesian3.ZERO] The scale of the box.
      *
+     * @example
+     * // Create an ObjectOrientedBoundingBox using a transformation matrix, a position where the box will be translated, and a scale.
+     * var rotation = Matrix3.clone(Matrix3.IDENTITY);
+     * var translation = new Cartesian3(1,0,0);
+     * var scale = new Cartesian3(0,5,0);
+     *
+     * var oobb = new ObjectOrientedBoundingBox(rotation, translation, scale);
+     *
+     * @see ObjectOrientedBoundingBox.fromPoints
+     * @see ObjectOrientedBoundingBox.fromBoundingRectangle
      * @see BoundingSphere
      */
     var ObjectOrientedBoundingBox = function(rotation, translation, scale) {
@@ -59,9 +69,10 @@ define([
     var scratchCartesian6 = new Cartesian3();
     var scratchCovarianceResult = new Matrix3();
     var scratchEigenResult = {
-            unitary : new Matrix3(),
-            diagonal : new Matrix3()
+        unitary : new Matrix3(),
+        diagonal : new Matrix3()
     };
+
     /**
      * Computes an instance of an ObjectOrientedBoundingBox of the given positions.
      * This is an implementation of Stefan Gottschalk's Collision Queries using Oriented Bounding Boxes solution (PHD thesis).
