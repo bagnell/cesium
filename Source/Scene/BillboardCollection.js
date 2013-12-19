@@ -756,6 +756,13 @@ define([
         }
         var allPurposeWriters = vafWriters[allPassPurpose];
         var positionHighWriter = allPurposeWriters[attributeIndices.positionHigh];
+
+        positionHighWriter(i + 0, position.x, position.y, position.z);
+        positionHighWriter(i + 1, position.x, position.y, position.z);
+        positionHighWriter(i + 2, position.x, position.y, position.z);
+        positionHighWriter(i + 3, position.x, position.y, position.z);
+
+        /*
         var high = writePositionScratch.high;
         positionHighWriter(i + 0, high.x, high.y, high.z);
         positionHighWriter(i + 1, high.x, high.y, high.z);
@@ -768,6 +775,7 @@ define([
         positionLowWriter(i + 1, low.x, low.y, low.z);
         positionLowWriter(i + 2, low.x, low.y, low.z);
         positionLowWriter(i + 3, low.x, low.y, low.z);
+        */
     }
 
     function writePixelOffsetAndTranslate(billboardCollection, context, textureAtlasCoordinates, vafWriters, billboard) {
@@ -1320,7 +1328,8 @@ define([
                     command = colorList[j] = new DrawCommand();
                 }
 
-                command.boundingVolume = boundingVolume;
+                //command.boundingVolume = boundingVolume;
+                command.boundingVolume = undefined;
                 command.modelMatrix = modelMatrix;
                 command.primitiveType = PrimitiveType.TRIANGLES;
                 command.count = va[j].indicesCount;

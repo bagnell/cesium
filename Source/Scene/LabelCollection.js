@@ -15,7 +15,7 @@ define([
         './LabelStyle',
         './HorizontalOrigin',
         './VerticalOrigin',
-        '../Scene/SceneTransforms',
+        '../Scene/SceneTransforms'
     ], function(
         defaultValue,
         DeveloperError,
@@ -273,7 +273,7 @@ define([
         return labels.sort(function(a,b) {
             return b._priority-a._priority;
         });
-    };
+    }
 
     function collides(label, indexInCollection) {
         var i=0;
@@ -321,9 +321,10 @@ define([
             }
 
         }*/
+
         label._positionWS.x = 300;
         label._positionWS.y = 300;
-        label.setPosition(label._positionWS);
+        //label.setPosition(label._positionWS);
     }
 
     /**
@@ -655,9 +656,13 @@ define([
             billboardCollection.setTextureAtlas(this._textureAtlas);
         }
 
+        var i;
+        var label;
+
         var labelsToUpdate = this._labelsToUpdate;
-        for ( var i = 0, len = labelsToUpdate.length; i < len; ++i) {
-            var label = labelsToUpdate[i];
+        var length = labelsToUpdate.length;
+        for (i = 0; i < length; ++i) {
+            label = labelsToUpdate[i];
             if (label.isDestroyed()) {
                 continue;
             }
@@ -677,7 +682,7 @@ define([
             scratchBoundingRectangle.width = label._width;
             scratchBoundingRectangle.height = label._height;
 
-            scratch2Dposition = label.computeScreenSpacePosition(context, frameState)
+            scratch2Dposition = label.computeScreenSpacePosition(context, frameState);
             scratchBoundingRectangle.x = scratch2Dposition.x;
             scratchBoundingRectangle.y = scratch2Dposition.y;
 
@@ -688,12 +693,24 @@ define([
         }
 
         var labels = this._labels;
-        for ( var i = 0, len = labels.length; i < len; ++i) {
-            var label = labels[i];
-            scratch2Dposition = label.computeScreenSpacePosition(context, frameState)
-            label._orientedBoundingBox.translation.x = scratch2Dposition.x+label._width/2;
-            label._orientedBoundingBox.translation.y = scratch2Dposition.y+label._height/2;
-            checkAndSetPosition(label, i);
+        length = labels.length;
+        for (i = 0; i < length; ++i) {
+            label = labels[i];
+            //scratch2Dposition = label.computeScreenSpacePosition(context, frameState);
+            //label._orientedBoundingBox.translation.x = scratch2Dposition.x+label._width/2;
+            //label._orientedBoundingBox.translation.y = scratch2Dposition.y+label._height/2;
+            //checkAndSetPosition(label, i);
+
+            label._positionWS = label.computeScreenSpacePosition(context, frameState);
+
+            var glyphs = label._glyphs;
+            var glyphLength = glyphs.length;
+            for (i = 0; i < glyphLength; i++) {
+                var glyph = glyphs[i];
+                if (defined(glyph.billboard)) {
+                    glyph.billboard.setPosition(label._positionWS);
+                }
+            }
         }
 
         labelsToUpdate.length = 0;

@@ -29,13 +29,12 @@ varying vec4 v_color;
 void main()
 {
     vec2 textureCoordinates = textureCoordinatesAndImageSize.xy;
-    vec3 positionWC = positionHigh.xyz;
-    float translucency = 1.0; //Later
     float scale = eyeOffsetAndScale.w;
     vec2 imageSize = textureCoordinatesAndImageSize.zw;
     vec2 halfSize = imageSize * scale * czm_highResolutionSnapScale;
     halfSize *= ((direction * 2.0) - 1.0);
     
+    vec3 positionWC = positionHigh.xyz;
     positionWC.xy += halfSize;
 
     gl_Position = czm_viewportOrthographic * vec4(positionWC.xy, -positionWC.z, 1.0);
@@ -45,6 +44,6 @@ void main()
     v_pickColor = pickColor;
 #else
     v_color = color;
-    v_color.a *= translucency;
+    //v_color.a *= translucency;
 #endif
 }

@@ -192,7 +192,8 @@ define([
         // Viewport transform to transform from clip coordinates to window coordinates
         Matrix4.multiplyByPoint(viewportTransform, positionNDC, positionWC);
 
-        return Cartesian2.fromCartesian4(positionWC, result);
+        //return Cartesian2.fromCartesian4(positionWC, result);
+        return Cartesian4.clone(positionWC, result);
     };
 
     /**
