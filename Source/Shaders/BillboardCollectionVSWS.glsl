@@ -59,6 +59,6 @@ void main()
     v_pickColor = pickColor;
 #else
     v_color = color;
-    //v_color.a *= translucency;
+    v_color.a *= translucency;
 #endif
 }

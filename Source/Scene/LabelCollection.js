@@ -279,26 +279,30 @@ define([
         var i=0;
         for (i=0;i<indexInCollection;++i) {
             if (ObjectOrientedBoundingBox.intersect(label._orientedBoundingBox, label._labelCollection._labels[i]._orientedBoundingBox)) {
-               return true;
+                if (label._labelCollection._labels[i]._alpha === 1.0) {
+                  return true;
+                }
             }
         }
         return false;
     }
     var scratchPosition = new Cartesian3();
     var scratch2Dposition = new Cartesian2();
+
     function checkAndSetPosition(label, indexInCollection) { //first move the OOB then the Label
 
-        var MAXTRYNUM=30;
-        var shiftScale=3;
+        var MAXTRYNUM=20;
+        var shiftScale=5;
 
         var originalX = label._orientedBoundingBox.translation.x;
         var originalY = label._orientedBoundingBox.translation.y;
         var minusPos = originalY;
         var shift=0;
-        var radius=12;
+        var radius=label._height+5;
         scratch2Dposition.x = originalX;
         scratch2Dposition.y = originalY;
         var tempPos;
+
         if (collides(label, indexInCollection)) {//check on the up half side of the circle
             var i;
             for (i=0;i<MAXTRYNUM;++i) {
@@ -319,15 +323,16 @@ define([
                 }
 
                 if (scratch2Dposition.x>=originalX+radius) {
-                    radius+=12;
+                    radius+=label._height;
                     shift=0;
                 } else {
                     ++shift;
                 }
-
                 if (i==MAXTRYNUM-1) { //Could not find a good place, let's put it on the original position. Some alpha modification would be good.
                     scratch2Dposition.x = originalX;
                     scratch2Dposition.y = originalY;
+                    label._alpha = 0.1;
+                    break;
                 }
             }
 
@@ -701,14 +706,15 @@ define([
 
             label._positionWS = label.computeScreenSpacePosition(context, frameState);
 
-            scratchBoundingRectangle.width = label._width;
-            scratchBoundingRectangle.height = label._height;
+            scratchBoundingRectangle.width = label._width*label._scale;
+            scratchBoundingRectangle.height = label._height*label._scale;
 
             scratchBoundingRectangle.x = label._positionWS.x;
             scratchBoundingRectangle.y = label._positionWS.y;
 
             ObjectOrientedBoundingBox.fromBoundingRectangle(scratchBoundingRectangle, 0.0, label._orientedBoundingBox);
 
+            label._alpha = 1.0;
             checkAndSetPosition(label, i);
 
             var glyphs = label._glyphs;
@@ -717,6 +723,7 @@ define([
                 var glyph = glyphs[j];
                 if (defined(glyph.billboard)) {
                     glyph.billboard.setPosition(label._positionWS);
+                    glyph.billboard._color.alpha = label._alpha;
                 }
             }
         }

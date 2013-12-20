@@ -85,6 +85,7 @@ define([
         this._positionWS = Cartesian3.clone(defaultValue(options.position, Cartesian3.ZERO));
         this._width = 0.0;
         this._height = 0.0;
+        this._alpha = 1.0;
         this._scale = defaultValue(options.scale, 1.0);
         this._id = options.id;
         this._translucencyByDistance = options.translucencyByDistance;
