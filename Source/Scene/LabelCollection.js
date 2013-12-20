@@ -287,44 +287,54 @@ define([
     var scratchPosition = new Cartesian3();
     var scratch2Dposition = new Cartesian2();
     function checkAndSetPosition(label, indexInCollection) { //first move the OOB then the Label
-        var radius=12;
-        var h = label._orientedBoundingBox.translation.x;
-        var k = label._orientedBoundingBox.translation.y;
-        var myPos = k;
+
+        var MAXTRYNUM=30;
+        var shiftScale=3;
+
+        var originalX = label._orientedBoundingBox.translation.x;
+        var originalY = label._orientedBoundingBox.translation.y;
+        var minusPos = originalY;
         var shift=0;
-        var MAXTRYNUM=20;
-        var i;
+        var radius=12;
+        scratch2Dposition.x = originalX;
+        scratch2Dposition.y = originalY;
+        var tempPos;
+        if (collides(label, indexInCollection)) {//check on the up half side of the circle
+            var i;
+            for (i=0;i<MAXTRYNUM;++i) {
+                tempPos = (-radius)+shift*radius/shiftScale;
+                scratch2Dposition.x = tempPos+originalX; //TODO we should start from up to optimize, because usually width>height
+                scratch2Dposition.y = Math.sqrt(Math.abs(radius*radius-tempPos*tempPos))+originalY; //up half side of the circle
+                minusPos = -(Math.sqrt(Math.abs(radius*radius-tempPos*tempPos)))+originalY; //down half side of the circle
 
-        scratch2Dposition.x = h;
-        scratch2Dposition.y = k;
-        /*
-        for (i=0;i<MAXTRYNUM;++i) {
-            scratch2Dposition.x = (h-radius)+shift*radius/3; //TODO we should start from up to optimize, because usually width>height
-            scratch2Dposition.y = Math.sqrt(Math.abs(radius*radius-scratch2Dposition.x*scratch2Dposition.x))+k; //up half side of the circle
-            myPos = -(Math.sqrt(Math.abs(radius*radius-scratch2Dposition.x*scratch2Dposition.x)))+k; //down half side of the circle
+                label._orientedBoundingBox.translation.x = scratch2Dposition.x; //TODO Do we need scratch2Dposition?
+                label._orientedBoundingBox.translation.y = scratch2Dposition.y;
+                if (!collides(label, indexInCollection)) {//check on the up half side of the circle
+                    break;
+                }
+                label._orientedBoundingBox.translation.y = minusPos;
+                scratch2Dposition.y = minusPos;
+                if (!collides(label, indexInCollection)) {//check on the down half side of the circle
+                    break;
+                }
 
-            if (scratch2Dposition.x>=h+radius*2) {
-                radius+=12;
-                shift=0;
-            } else {
-                ++shift;
+                if (scratch2Dposition.x>=originalX+radius) {
+                    radius+=12;
+                    shift=0;
+                } else {
+                    ++shift;
+                }
+
+                if (i==MAXTRYNUM-1) { //Could not find a good place, let's put it on the original position. Some alpha modification would be good.
+                    scratch2Dposition.x = originalX;
+                    scratch2Dposition.y = originalY;
+                }
             }
 
-            label._orientedBoundingBox.translation.x = scratch2Dposition.x;
-            label._orientedBoundingBox.translation.y = scratch2Dposition.y;
-            if (!collides(label, indexInCollection)) {//check on the up half side of the circle
-                break;
-            }
-            label._orientedBoundingBox.translation.y = myPos+label._height/2;
-            if (!collides(label, indexInCollection)) {//check on the down half side of the circle
-                break;
-            }
+        }
 
-        }*/
-
-        label._positionWS.x = 300;
-        label._positionWS.y = 300;
-        //label.setPosition(label._positionWS);
+        label._positionWS.x = scratch2Dposition.x-label._width/2;
+        label._positionWS.y = scratch2Dposition.y-label._height/2;
     }
 
     /**
@@ -657,6 +667,7 @@ define([
         }
 
         var i;
+        var j;
         var label;
 
         var labelsToUpdate = this._labelsToUpdate;
@@ -679,15 +690,6 @@ define([
                 label._repositionAllGlyphs = false;
             }
 
-            scratchBoundingRectangle.width = label._width;
-            scratchBoundingRectangle.height = label._height;
-
-            scratch2Dposition = label.computeScreenSpacePosition(context, frameState);
-            scratchBoundingRectangle.x = scratch2Dposition.x;
-            scratchBoundingRectangle.y = scratch2Dposition.y;
-
-            ObjectOrientedBoundingBox.fromBoundingRectangle(scratchBoundingRectangle, 0.0, label._orientedBoundingBox);
-
             var glyphCountDifference = label._glyphs.length - preUpdateGlyphCount;
             this._totalGlyphCount += glyphCountDifference;
         }
@@ -696,17 +698,23 @@ define([
         length = labels.length;
         for (i = 0; i < length; ++i) {
             label = labels[i];
-            //scratch2Dposition = label.computeScreenSpacePosition(context, frameState);
-            //label._orientedBoundingBox.translation.x = scratch2Dposition.x+label._width/2;
-            //label._orientedBoundingBox.translation.y = scratch2Dposition.y+label._height/2;
-            //checkAndSetPosition(label, i);
 
             label._positionWS = label.computeScreenSpacePosition(context, frameState);
 
+            scratchBoundingRectangle.width = label._width;
+            scratchBoundingRectangle.height = label._height;
+
+            scratchBoundingRectangle.x = label._positionWS.x;
+            scratchBoundingRectangle.y = label._positionWS.y;
+
+            ObjectOrientedBoundingBox.fromBoundingRectangle(scratchBoundingRectangle, 0.0, label._orientedBoundingBox);
+
+            checkAndSetPosition(label, i);
+
             var glyphs = label._glyphs;
             var glyphLength = glyphs.length;
-            for (i = 0; i < glyphLength; i++) {
-                var glyph = glyphs[i];
+            for (j = 0; j < glyphLength; j++) {
+                var glyph = glyphs[j];
                 if (defined(glyph.billboard)) {
                     glyph.billboard.setPosition(label._positionWS);
                 }
