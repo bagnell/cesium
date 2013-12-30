@@ -970,7 +970,7 @@ define([
         positionEC.z += zEyeOffset.z;
 
         var positionCC = Matrix4.multiplyByVector(projection, positionEC, scratchCartesian4); // clip coordinates
-        var positionWC = SceneTransforms.clipToWindowCoordinates(context, positionCC, new Cartesian2());
+        var positionWC = SceneTransforms.clipToWindowCoordinates(context, positionCC);
 
         // Apply pixel offset
         var uniformState = context.getUniformState();
@@ -978,7 +978,6 @@ define([
         positionWC.x += po.x;
         positionWC.y += po.y;
 
-        //return new Cartesian2(positionWC.x, positionWC.y);
         return positionWC;
     };
 
