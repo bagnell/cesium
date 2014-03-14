@@ -320,6 +320,17 @@ function showBoundingSpheres(show) {
             errorElement.style.display = 'none';
         }
     });
+    
+    var instructions = document.createElement('div');
+    instructions.style.cssText = 'width: 95%;';
+    document.getElementById('toolbar').appendChild(instructions);
+    
+    instructions.appendChild(document.createElement('br'));
+    instructions.appendChild(document.createTextNode('Pan - left mouse drag'));
+    instructions.appendChild(document.createElement('br'));
+    instructions.appendChild(document.createTextNode('Tilt - middle mouse drag'));
+    instructions.appendChild(document.createElement('br'));
+    instructions.appendChild(document.createTextNode('Zoom - right mouse drag'));
 })(scene);
 
 Sandcastle.finishedLoading();
