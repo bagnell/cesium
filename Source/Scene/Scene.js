@@ -1462,7 +1462,10 @@ define([
 
         var methodChanged = scene._translucentMRTSupport !== scene._translucentMRTShadow || scene._translucentMultipassSupport !== scene._translucentMultipassShadow;
 
-        if (methodChanged) {
+        var compositeTexture = scene._compositeTexture;
+        var textureChanged = !defined(compositeTexture) || compositeTexture.getWidth() !== width || compositeTexture.getHeight() !== height;
+
+        if (methodChanged || textureChanged) {
             scene._translucentMRTShadow = scene._translucentMRTSupport;
             scene._translucentMultipassShadow = scene._translucentMultipassSupport;
 
@@ -1493,8 +1496,8 @@ define([
             scene._depthRenderbuffer = undefined;
         }
 
-        var compositeTexture = scene._compositeTexture;
-        var textureChanged = !defined(compositeTexture) || compositeTexture.getWidth() !== width || compositeTexture.getHeight() !== height;
+        compositeTexture = scene._compositeTexture;
+        textureChanged = methodChanged || !defined(compositeTexture) || compositeTexture.getWidth() !== width || compositeTexture.getHeight() !== height;
         if (textureChanged) {
             updateTextures(scene, width, height, supported, useFXAA);
         }
