@@ -26,34 +26,215 @@ var widget = new Cesium.CesiumWidget('cesiumContainer');
 var scene = widget.scene;
 scene.debugShowFramesPerSecond = true;
 
+var primitives = scene.primitives;
+var ellipsoid = widget.centralBody.ellipsoid;
+
+var geometry = [];
+
+function createPrimitives(batch) {
+    primitives.removeAll();
+    geometry.length = 0;
+    
+	var modelMatrix = Cesium.Matrix4.multiplyByTranslation(
+	    Cesium.Transforms.eastNorthUpToFixedFrame(ellipsoid.cartographicToCartesian(Cesium.Cartographic.fromDegrees(-68.0, 40.0))),
+	    new Cesium.Cartesian3(0.0, 0.0, 500000.0));
+	
+	var outerEllipsoidInstance = new Cesium.GeometryInstance({
+	    geometry : new Cesium.EllipsoidGeometry({
+	        vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
+	        radii : new Cesium.Cartesian3(500000.0, 500000.0, 500000.0)
+	    }),
+	    modelMatrix : modelMatrix,
+	    attributes : {
+	        color : Cesium.ColorGeometryInstanceAttribute.fromColor(new Cesium.Color(0.0, 1.0, 0.0, 0.5))
+	    }
+	});
+	
+	var innerEllipsoidInstance = new Cesium.GeometryInstance({
+	    geometry : new Cesium.EllipsoidGeometry({
+	        vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
+	        radii : new Cesium.Cartesian3(250000.0, 250000.0, 250000.0)
+	    }),
+	    modelMatrix : modelMatrix,
+	    attributes : {
+	        color : Cesium.ColorGeometryInstanceAttribute.fromColor(new Cesium.Color(1.0, 0.0, 0.0, 0.5))
+	    }
+	});
+	
+	var boxGeometryInstance = new Cesium.GeometryInstance({
+	    geometry : Cesium.BoxGeometry.fromDimensions({
+	        vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
+	        dimensions : new Cesium.Cartesian3(750000.0, 750000.0, 750000.0)
+	    }),
+	    modelMatrix : modelMatrix,
+	    attributes : {
+	        color : Cesium.ColorGeometryInstanceAttribute.fromColor(new Cesium.Color(1.0, 0.0, 0.0, 0.5))
+	    }
+	});
+	
+	var appearance = new Cesium.PerInstanceColorAppearance({
+        translucent : true,
+        closed : true
+    });
+	
+	if (batch) {
+	    geometry.push(primitives.add(new Cesium.Primitive({
+            geometryInstances : [boxGeometryInstance, outerEllipsoidInstance],
+            appearance : appearance
+        })));
+	} else {
+	    geometry.push(
+	        primitives.add(new Cesium.Primitive({
+	            geometryInstances : [boxGeometryInstance],
+	            appearance : appearance
+	        })),
+	        primitives.add(new Cesium.Primitive({
+	            geometryInstances : [outerEllipsoidInstance],
+	            appearance : appearance
+	        }))
+        );
+	}
+	
+	var redExtentInstance = new Cesium.GeometryInstance({
+	    geometry : new Cesium.ExtentGeometry({
+	        extent : Cesium.Extent.fromDegrees(-95.0, 20.0, -85.0, 30.0),
+	        vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT
+	    }),
+	    attributes: {
+	        color: Cesium.ColorGeometryInstanceAttribute.fromColor(new Cesium.Color(1.0, 0.0, 0.0, 0.5))
+	    }
+	});
+	
+	var yellowExtentInstance = new Cesium.GeometryInstance({
+	    geometry : new Cesium.ExtentGeometry({
+	        extent : Cesium.Extent.fromDegrees(-90.0, 25.0, -80.0, 35.0),
+	        vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
+	        height : 100000.0
+	    }),
+	    attributes: {
+	        color: Cesium.ColorGeometryInstanceAttribute.fromColor(new Cesium.Color(1.0, 1.0, 0.0, 0.5))
+	    }
+	});
+	
+	var blueExtentInstance = new Cesium.GeometryInstance({
+	    geometry : new Cesium.ExtentGeometry({
+	        extent : Cesium.Extent.fromDegrees(-85.0, 30.0, -75.0, 40.0),
+	        vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
+	        height : 200000.0
+	    }),
+	    attributes: {
+	        color: Cesium.ColorGeometryInstanceAttribute.fromColor(new Cesium.Color(0.0, 0.0, 1.0, 0.5))
+	    }
+	});
+	
+	appearance = new Cesium.PerInstanceColorAppearance({
+        translucent : true
+    });
+	
+	if (batch) {
+	    geometry.push(primitives.add(new Cesium.Primitive({
+            geometryInstances : [redExtentInstance, yellowExtentInstance, blueExtentInstance],
+            appearance : appearance
+        })));
+	} else {
+	    geometry.push(
+            primitives.add(new Cesium.Primitive({
+                geometryInstances : redExtentInstance,
+                appearance : appearance
+            })),
+            primitives.add(new Cesium.Primitive({
+                geometryInstances : yellowExtentInstance,
+                appearance : appearance
+            })),
+            primitives.add(new Cesium.Primitive({
+                geometryInstances : blueExtentInstance,
+                appearance : appearance
+            }))
+        );
+	}
+	
+	var maxLat = 50.0;
+	var minLat = 30.0;
+	var latIncrement = 2.0;
+	
+	var maxLon = -125.0;
+	var minLon = -95.0;
+	var lonIncrement = 2.0;
+	
+	var gap = 1.0;
+	
+	var minHeight = 100000.0;
+	var maxHeight = 500000.0;
+	
+	var instances = [];
+	
+	for (var lon = maxLon; lon < minLon; lon += lonIncrement + gap) {
+	    for (var lat = maxLat; lat > minLat; lat -= latIncrement + gap) {
+	        var color = new Cesium.Color(Math.random(), Math.random(), Math.random(), 0.5);
+	        
+	        instances.push(new Cesium.GeometryInstance({
+		        geometry : new Cesium.ExtentGeometry({
+		            extent : Cesium.Extent.fromDegrees(lon, lat - latIncrement, lon + lonIncrement, lat),
+		            vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
+		            height : Math.random() * (maxHeight - minHeight) + minHeight,
+		            extrudedHeight : 0.0
+		        }),
+		        attributes: {
+		            color: Cesium.ColorGeometryInstanceAttribute.fromColor(color)
+		        }
+		    }));
+	    }
+	}
+	
+	if (batch) {
+	    geometry.push(primitives.add(new Cesium.Primitive({
+            geometryInstances : instances,
+            appearance : appearance
+        })));
+	} else {
+	    for (var j = 0; j < instances.length; ++j) {
+	        geometry.push(primitives.add(new Cesium.Primitive({
+	            geometryInstances : instances[j],
+	            appearance : appearance
+	        })));
+	    }
+	}
+}
+
+function showBoundingSpheres(show) {
+    for (var i = 0; i < geometry.length; ++i) {
+        geometry[i].debugShowBoundingVolume = show;
+    }
+}
+
 (function (scene) {
- function selectMenuOption(menu, options) {
-     options[menu.selectedIndex].onselect();
- }
+    function selectMenuOption(menu, options) {
+        options[menu.selectedIndex].onselect();
+    }
  
- var toggleOITMethod = [];
+    var toggleOITMethod = [];
  
- // render one frame to check for MRT support
- scene.initializeFrame();
- scene.render();
+    // render one frame to check for MRT support
+    scene.initializeFrame();
+    scene.render();
  
- if (scene._translucentMRTSupport) {
-     toggleOITMethod.push({
-         text : 'Use Multiple Render Targets for OIT',
-         onselect : function() {
-             scene._translucentMRTSupport = true;
-             scene._translucentMultipassSupport = false;
-         }
-     });
- }
+    if (scene._translucentMRTSupport) {
+        toggleOITMethod.push({
+            text : 'Use Multiple Render Targets for OIT',
+            onselect : function() {
+                scene._translucentMRTSupport = true;
+                scene._translucentMultipassSupport = false;
+            }
+        });
+    }
  
- // render another frame with MRT disabled to check for multipass support
- scene._translucentMRTSupport = false;
- scene._translucentMultipassSupport = true;
- scene.initializeFrame();
+    // render another frame with MRT disabled to check for multipass support
+    scene._translucentMRTSupport = false;
+    scene._translucentMultipassSupport = true;
+    scene.initializeFrame();
     scene.render();
     
- if (scene._translucentMultipassSupport) {
+    if (scene._translucentMultipassSupport) {
         toggleOITMethod.push({
             text : 'Use Multiple Passes for OIT',
             onselect : function() {
@@ -61,10 +242,10 @@ scene.debugShowFramesPerSecond = true;
                 scene._translucentMultipassSupport = true;
             }
         });
- }
+    }
  
- // bounding volume sorting is always supported
- toggleOITMethod.push({
+    // bounding volume sorting is always supported
+    toggleOITMethod.push({
         text : 'Use Bounding Volume Sorting',
         onselect : function() {
             scene._translucentMRTSupport = false;
@@ -72,14 +253,14 @@ scene.debugShowFramesPerSecond = true;
         }
     });
  
- // reset to best method
- toggleOITMethod[0].onselect();
+    // reset to best method
+    toggleOITMethod[0].onselect();
  
- Sandcastle.addToolbarMenu(toggleOITMethod, function() {
+    Sandcastle.addToolbarMenu(toggleOITMethod, function() {
         selectMenuOption(this, toggleOITMethod);
     });
  
- var toggleFXAAOptions = [ {
+    var toggleFXAAOptions = [ {
         text : 'FXAA Enabled',
         onselect : function() {
             scene.fxaaOrderIndependentTranslucency = true;
@@ -94,6 +275,27 @@ scene.debugShowFramesPerSecond = true;
     Sandcastle.addToolbarMenu(toggleFXAAOptions, function() {
         selectMenuOption(this, toggleFXAAOptions);
     });
+    
+    var batched = document.createElement('input');
+    batched.type = 'checkbox';
+    batched.checked = true;
+    document.getElementById('toolbar').appendChild(batched);
+    document.getElementById('toolbar').appendChild(document.createTextNode('Batch Geometry'));
+    
+    var showBV = document.createElement('input');
+    showBV.type = 'checkbox';
+    showBV.checked = false;
+    showBV.onchange = function() {
+        showBoundingSpheres(this.checked);
+    };
+    document.getElementById('toolbar').appendChild(showBV);
+    document.getElementById('toolbar').appendChild(document.createTextNode('Show Bounding Spheres'));
+    
+    batched.onchange = function() {
+        createPrimitives(this.checked);
+        showBoundingSpheres(showBV.checked);
+    };
+    batched.onchange();
     
     var text = document.createElement('input');
     text.type = 'text';
@@ -119,101 +321,6 @@ scene.debugShowFramesPerSecond = true;
         }
     });
 })(scene);
-
-var primitives = scene.primitives;
-var ellipsoid = widget.centralBody.ellipsoid;
-
-var modelMatrix = Cesium.Matrix4.multiplyByTranslation(
-    Cesium.Transforms.eastNorthUpToFixedFrame(ellipsoid.cartographicToCartesian(Cesium.Cartographic.fromDegrees(-75.0, 40.0))),
-    new Cesium.Cartesian3(0.0, 0.0, 500000.0));
-
-var outerEllipsoidInstance = new Cesium.GeometryInstance({
-    geometry : new Cesium.EllipsoidGeometry({
-        vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
-        radii : new Cesium.Cartesian3(500000.0, 500000.0, 500000.0)
-    }),
-    modelMatrix : modelMatrix,
-    attributes : {
-        color : Cesium.ColorGeometryInstanceAttribute.fromColor(new Cesium.Color(0.0, 1.0, 0.0, 0.5))
-    }
-});
-
-var innerEllipsoidInstance = new Cesium.GeometryInstance({
-    geometry : new Cesium.EllipsoidGeometry({
-        vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
-        radii : new Cesium.Cartesian3(250000.0, 250000.0, 250000.0)
-    }),
-    modelMatrix : modelMatrix,
-    attributes : {
-        color : Cesium.ColorGeometryInstanceAttribute.fromColor(new Cesium.Color(1.0, 0.0, 0.0, 0.5))
-    }
-});
-
-var boxGeometryInstance = new Cesium.GeometryInstance({
-    geometry : Cesium.BoxGeometry.fromDimensions({
-        vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
-        dimensions : new Cesium.Cartesian3(750000.0, 750000.0, 750000.0)
-    }),
-    modelMatrix : modelMatrix,
-    attributes : {
-        color : Cesium.ColorGeometryInstanceAttribute.fromColor(new Cesium.Color(1.0, 0.0, 0.0, 0.5))
-    }
-});
-
-primitives.add(new Cesium.Primitive({
-    geometryInstances : [boxGeometryInstance],
-    appearance : new Cesium.PerInstanceColorAppearance({
-        translucent : true,
-        closed : true
-    })
-}));
-
-primitives.add(new Cesium.Primitive({
-    geometryInstances : [outerEllipsoidInstance],
-    appearance : new Cesium.PerInstanceColorAppearance({
-        translucent : true,
-        closed : true
-    })
-}));
-
-var redExtentInstance = new Cesium.GeometryInstance({
-    geometry : new Cesium.ExtentGeometry({
-        extent : Cesium.Extent.fromDegrees(-110.0, 20.0, -100.0, 30.0),
-        vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT
-    }),
-    attributes: {
-        color: Cesium.ColorGeometryInstanceAttribute.fromColor(new Cesium.Color(1.0, 0.0, 0.0, 0.5))
-    }
-});
-
-var yellowExtentInstance = new Cesium.GeometryInstance({
-    geometry : new Cesium.ExtentGeometry({
-        extent : Cesium.Extent.fromDegrees(-105.0, 25.0, -95.0, 35.0),
-        vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
-        height : 100000.0
-    }),
-    attributes: {
-        color: Cesium.ColorGeometryInstanceAttribute.fromColor(new Cesium.Color(1.0, 1.0, 0.0, 0.5))
-    }
-});
-
-var blueExtentInstance = new Cesium.GeometryInstance({
-    geometry : new Cesium.ExtentGeometry({
-        extent : Cesium.Extent.fromDegrees(-100.0, 30.0, -90.0, 40.0),
-        vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
-        height : 200000.0
-    }),
-    attributes: {
-        color: Cesium.ColorGeometryInstanceAttribute.fromColor(new Cesium.Color(0.0, 0.0, 1.0, 0.5))
-    }
-});
-
-primitives.add(new Cesium.Primitive({
-    geometryInstances : [redExtentInstance, yellowExtentInstance, blueExtentInstance],
-    appearance : new Cesium.PerInstanceColorAppearance({
-        translucent : true
-    })
-}));
 
 Sandcastle.finishedLoading();
 </script>
