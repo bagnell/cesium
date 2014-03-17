@@ -220,7 +220,7 @@ function showBoundingSpheres(show) {
  
     if (scene._translucentMRTSupport) {
         toggleOITMethod.push({
-            text : 'Use Multiple Render Targets for OIT',
+            text : 'OIT with Multiple Render Targets',
             onselect : function() {
                 scene._translucentMRTSupport = true;
                 scene._translucentMultipassSupport = false;
@@ -236,7 +236,7 @@ function showBoundingSpheres(show) {
     
     if (scene._translucentMultipassSupport) {
         toggleOITMethod.push({
-            text : 'Use Multiple Passes for OIT',
+            text : 'OIT with Multiple Passes',
             onselect : function() {
                 scene._translucentMRTSupport = false;
                 scene._translucentMultipassSupport = true;
@@ -246,7 +246,7 @@ function showBoundingSpheres(show) {
  
     // bounding volume sorting is always supported
     toggleOITMethod.push({
-        text : 'Use Bounding Volume Sorting',
+        text : 'Alpha Blending',
         onselect : function() {
             scene._translucentMRTSupport = false;
             scene._translucentMultipassSupport = false;
