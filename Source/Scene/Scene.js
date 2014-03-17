@@ -940,14 +940,14 @@ define([
     var mrtShaderSource =
         '    vec3 Ci = czm_gl_FragColor.rgb * czm_gl_FragColor.a;\n' +
         '    float ai = czm_gl_FragColor.a;\n' +
-        '    float wzi = czm_alphaWeight(v_z, ai);\n' +
+        '    float wzi = czm_alphaWeight(ai);\n' +
         '    gl_FragData[0] = vec4(Ci * wzi, ai);\n' +
         '    gl_FragData[1] = vec4(ai * wzi);\n';
 
     var colorShaderSource =
         '    vec3 Ci = czm_gl_FragColor.rgb * czm_gl_FragColor.a;\n' +
         '    float ai = czm_gl_FragColor.a;\n' +
-        '    float wzi = czm_alphaWeight(v_z, ai);\n' +
+        '    float wzi = czm_alphaWeight(ai);\n' +
         '    gl_FragColor = vec4(Ci, ai) * wzi;\n';
 
     var alphaShaderSource =
@@ -962,22 +962,25 @@ define([
             var vs = shaderProgram.vertexShaderSource;
             var fs = shaderProgram.fragmentShaderSource;
 
-            var renamedVS = vs.replace(/void\s+main\s*\(\s*(?:void)?\s*\)/g, 'void czm_translucent_main()');
-            var hasPositionEC = renamedVS.indexOf('v_positionEC') !== -1;
-            var newSourceVS =
-                'varying float v_z;\n\n' +
-                renamedVS + '\n\n' +
-                'void main()\n' +
-                '{\n' +
-                '    czm_translucent_main();\n' +
-                '    v_z = ' + (hasPositionEC ? 'v_positionEC.z' : '(czm_modelViewRelativeToEye * czm_computePosition()).z') + ';\n' +
-                '}\n';
-
             var weightFunction = '';
             if (defined(scene.weightFunction) && scene.weightFunction.length > 0) {
                 weightFunction =
-                    'float oit_alphaWeight(float z, float a)\n' +
+                    'float oit_alphaWeight(float a)\n' +
                     '{\n' +
+                    '    float z;\n' +
+                    '    if (czm_sceneMode != czm_sceneMode2D)\n' +
+                    '    {\n' +
+                    '        float x = 2.0 * (gl_FragCoord.x - czm_viewport.x) / czm_viewport.z - 1.0;\n' +
+                    '        float y = 2.0 * (gl_FragCoord.y - czm_viewport.y) / czm_viewport.w - 1.0;\n' +
+                    '        float z = (gl_FragCoord.z - czm_viewportTransformation[3][2]) / czm_viewportTransformation[2][2];\n' +
+                    '        vec4 q = vec4(x, y, z, 1.0);\n' +
+                    '        q /= gl_FragCoord.w;\n' +
+                    '        z = (czm_inverseProjectionOIT * q).z;\n' +
+                    '    }\n' +
+                    '    else\n' +
+                    '    {\n' +
+                    '        z = gl_FragCoord.z * (czm_currentFrustum.y - czm_currentFrustum.x) + czm_currentFrustum.x;\n' +
+                    '    }\n' +
                     '    return ' + scene.weightFunction + ';\n' +
                     '}\n';
             }
@@ -994,7 +997,6 @@ define([
                 (source.indexOf('gl_FragData') !== -1 ? '#extension GL_EXT_draw_buffers : enable \n' : '') +
                 'vec4 czm_gl_FragColor;\n' +
                 'bool czm_discard = false;\n' +
-                'varying float v_z;\n\n' +
                 weightFunction + '\n\n' +
                 renamedFS + '\n\n' +
                 'void main()\n' +
@@ -1011,7 +1013,7 @@ define([
                 newSourceFS = newSourceFS.replace(/czm_alphaWeight/g, 'oit_alphaWeight');
             }
 
-            shader = scene._context.getShaderCache().getShaderProgram(newSourceVS, newSourceFS, attributeLocations);
+            shader = scene._context.getShaderCache().getShaderProgram(vs, newSourceFS, attributeLocations);
 
             var valid = true;
             try {
@@ -1045,7 +1047,7 @@ define([
                     source +
                     '}\n';
 
-                shader = scene._context.getShaderCache().getShaderProgram(newSourceVS, newSourceFS, attributeLocations);
+                shader = scene._context.getShaderCache().getShaderProgram(vs, newSourceFS, attributeLocations);
             }
             cache[id] = shader;
         }
@@ -1343,29 +1345,24 @@ define([
         var context = scene._context;
 
         if (supportedOIT) {
-            var sampler = context.createSampler({
-                minificationFilter : TextureMinificationFilter.NEAREST,
-                magnificationFilter : TextureMagnificationFilter.NEAREST
-            });
             var opaqueTexture = scene._opaqueTexture = context.createTexture2D({
                 width : width,
-                height : height
+                height : height,
+                pixelFormat : PixelFormat.RGB,
+                pixelDatatype : PixelDatatype.UNSIGNED_BYTE
             });
-            opaqueTexture.setSampler(sampler);
             var accumulationTexture = scene._accumulationTexture = context.createTexture2D({
                 width : width,
                 height : height,
                 pixelFormat : PixelFormat.RGBA,
                 pixelDatatype : PixelDatatype.FLOAT
             });
-            accumulationTexture.setSampler(sampler);
             var revealageTexture = scene._revealageTexture = context.createTexture2D({
                 width : width,
                 height : height,
                 pixelFormat : PixelFormat.RGBA,
                 pixelDatatype : PixelDatatype.FLOAT
             });
-            revealageTexture.setSampler(sampler);
         }
 
         if (useFXAA || supportedOIT) {
