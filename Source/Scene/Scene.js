@@ -1069,6 +1069,11 @@ define([
 
         context.endFrame();
         callAfterRenderFunctions(frameState);
+
+        if (defined(this._oitResources._errorMessage)) {
+            this._oitResources.onError.raiseEvent(this._oitResources._errorMessage);
+            this._oitResources._errorMessage = undefined;
+        }
     };
 
     var orthoPickingFrustum = new OrthographicFrustum();

@@ -3,6 +3,7 @@ define([
         '../Core/defined',
         '../Core/destroyObject',
         '../Core/Color',
+        '../Core/Event',
         '../Renderer/createShaderSource',
         '../Renderer/BlendFunction',
         '../Renderer/ClearCommand',
@@ -14,6 +15,7 @@ define([
         defined,
         destroyObject,
         Color,
+        Event,
         createShaderSource,
         BlendFunction,
         ClearCommand,
@@ -33,6 +35,9 @@ define([
 
         // We support multipass for the Chrome D3D9 backend and ES 2.0 on mobile.
         this._translucentMultipassSupport = !this._translucentMRTSupport && extensionsSupported;
+
+        this._translucentMRTShadow = this._translucentMRTSupport;
+        this._translucentMultipassShadow = this._translucentMultipassSupport;
 
         this._opaqueTexture = undefined;
         this._accumulationTexture = undefined;
@@ -73,6 +78,12 @@ define([
         this._compositeCommand = undefined;
         this._adjustTranslucentCommand = undefined;
         this._adjustAlphaCommand = undefined;
+
+        this.weightFunction = 'pow(a + 0.01, 4.0) + max(1e-2, min(3.0 * 1e3, 100.0 / (1e-5 + pow(abs(z) / 10.0, 3.0) + pow(abs(z) / 200.0, 6.0))))';
+        this._weightFunction = this.weightFunction;
+
+        this.onError = new Event();
+        this._errorMessage = undefined;
     };
 
     function destroyTextures(that) {
@@ -201,6 +212,10 @@ define([
             return;
         }
 
+        var methodChanged = this._methodChanged = this._translucentMRTSupport !== this._translucentMRTShadow || this._translucentMultipassSupport !== this._translucentMultipassShadow;
+        this._translucentMRTShadow = this._translucentMRTSupport;
+        this._translucentMultipassShadow = this._translucentMultipassSupport;
+
         var width = context.getDrawingBufferWidth();
         var height = context.getDrawingBufferHeight();
 
@@ -210,7 +225,7 @@ define([
             updateTextures(this, context, width, height);
         }
 
-        if (!defined(this._opaqueFBO) || textureChanged) {
+        if (!defined(this._opaqueFBO) || textureChanged || methodChanged) {
             updateFramebuffers(this, context);
 
             // framebuffer creation failed
@@ -223,7 +238,7 @@ define([
         var fs;
         var uniformMap;
 
-        if (!defined(this._compositeCommand)) {
+        if (!defined(this._compositeCommand) || methodChanged) {
             fs = createShaderSource({
                 defines : [this._translucentMRTSupport ? 'MRT' : ''],
                 sources : [CompositeOITFS]
@@ -243,7 +258,7 @@ define([
             this._compositeCommand = context.createViewportQuadCommand(fs, context.createRenderState(), uniformMap);
         }
 
-        if (!defined(this._adjustTranslucentCommand)) {
+        if (!defined(this._adjustTranslucentCommand) || methodChanged) {
             if (this._translucentMRTSupport) {
                 fs = createShaderSource({
                     defines : ['MRT'],
@@ -314,9 +329,9 @@ define([
         functionDestinationAlpha : BlendFunction.ONE_MINUS_SOURCE_ALPHA
     };
 
-    function getTranslucentRenderState(context, translucentBlending, cache, renderState) {
+    function getTranslucentRenderState(context, translucentBlending, cache, renderState, forceUpdate) {
         var translucentState = cache[renderState.id];
-        if (!defined(translucentState)) {
+        if (!defined(translucentState) || forceUpdate) {
             var depthMask = renderState.depthMask;
             var blending = renderState.blending;
 
@@ -333,16 +348,16 @@ define([
         return translucentState;
     }
 
-    function getTranslucentMRTRenderState(that, context, renderState) {
-        return getTranslucentRenderState(context, translucentMRTBlend, that._translucentRenderStateCache, renderState);
+    function getTranslucentMRTRenderState(that, context, renderState, forceUpdate) {
+        return getTranslucentRenderState(context, translucentMRTBlend, that._translucentRenderStateCache, renderState, forceUpdate);
     }
 
-    function getTranslucentColorRenderState(that, context, renderState) {
-        return getTranslucentRenderState(context, translucentColorBlend, that._translucentRenderStateCache, renderState);
+    function getTranslucentColorRenderState(that, context, renderState, forceUpdate) {
+        return getTranslucentRenderState(context, translucentColorBlend, that._translucentRenderStateCache, renderState, forceUpdate);
     }
 
-    function getTranslucentAlphaRenderState(that, context, renderState) {
-        return getTranslucentRenderState(context, translucentAlphaBlend, that._alphaRenderStateCache, renderState);
+    function getTranslucentAlphaRenderState(that, context, renderState, forceUpdate) {
+        return getTranslucentRenderState(context, translucentAlphaBlend, that._alphaRenderStateCache, renderState, forceUpdate);
     }
 
     var mrtShaderSource =
@@ -362,13 +377,36 @@ define([
         '    float ai = czm_gl_FragColor.a;\n' +
         '    gl_FragColor = vec4(ai);\n';
 
-    function getTranslucentShaderProgram(context, shaderProgram, cache, source) {
+    function getTranslucentShaderProgram(that, context, shaderProgram, cache, source, forceUpdate) {
         var id = shaderProgram.id;
         var shader = cache[id];
-        if (!defined(shader)) {
+        if (!defined(shader) || forceUpdate) {
             var attributeLocations = shaderProgram._attributeLocations;
             var vs = shaderProgram.vertexShaderSource;
             var fs = shaderProgram.fragmentShaderSource;
+
+            var weightFunction = '';
+            if (defined(that.weightFunction) && that.weightFunction.length > 0) {
+                weightFunction =
+                    'float oit_alphaWeight(float a)\n' +
+                    '{\n' +
+                    '    float z;\n' +
+                    '    if (czm_sceneMode != czm_sceneMode2D)\n' +
+                    '    {\n' +
+                    '        float x = 2.0 * (gl_FragCoord.x - czm_viewport.x) / czm_viewport.z - 1.0;\n' +
+                    '        float y = 2.0 * (gl_FragCoord.y - czm_viewport.y) / czm_viewport.w - 1.0;\n' +
+                    '        float z = (gl_FragCoord.z - czm_viewportTransformation[3][2]) / czm_viewportTransformation[2][2];\n' +
+                    '        vec4 q = vec4(x, y, z, 1.0);\n' +
+                    '        q /= gl_FragCoord.w;\n' +
+                    '        z = (czm_inverseProjectionOIT * q).z;\n' +
+                    '    }\n' +
+                    '    else\n' +
+                    '    {\n' +
+                    '        z = gl_FragCoord.z * (czm_currentFrustum.y - czm_currentFrustum.x) + czm_currentFrustum.x;\n' +
+                    '    }\n' +
+                    '    return ' + that.weightFunction + ';\n' +
+                    '}\n';
+            }
 
             var renamedFS = fs.replace(/void\s+main\s*\(\s*(?:void)?\s*\)/g, 'void czm_translucent_main()');
             renamedFS = renamedFS.replace(/gl_FragColor/g, 'czm_gl_FragColor');
@@ -381,6 +419,7 @@ define([
                 (source.indexOf('gl_FragData') !== -1 ? '#extension GL_EXT_draw_buffers : enable \n' : '') +
                 'vec4 czm_gl_FragColor;\n' +
                 'bool czm_discard = false;\n' +
+                weightFunction + '\n\n' +
                 renamedFS + '\n\n' +
                 'void main()\n' +
                 '{\n' +
@@ -392,26 +431,65 @@ define([
                 source +
                 '}\n';
 
+            if (defined(that.weightFunction) && that.weightFunction.length > 0) {
+                newSourceFS = newSourceFS.replace(/czm_alphaWeight/g, 'oit_alphaWeight');
+            }
+
             shader = context.getShaderCache().getShaderProgram(vs, newSourceFS, attributeLocations);
+
+            var valid = true;
+            try {
+                // force compile and link
+                shader.getVertexAttributes();
+            } catch (e) {
+                that._errorMessage = e.message;
+                valid = false;
+            }
+
+            if (!valid) {
+                // try again with default weight function.
+                renamedFS = fs.replace(/void\s+main\s*\(\s*(?:void)?\s*\)/g, 'void czm_translucent_main()');
+                renamedFS = renamedFS.replace(/gl_FragColor/g, 'czm_gl_FragColor');
+                renamedFS = renamedFS.replace(/discard/g, 'czm_discard = true');
+                renamedFS = renamedFS.replace(/czm_phong/g, 'czm_translucentPhong');
+
+                newSourceFS =
+                    (source.indexOf('gl_FragData') !== -1 ? '#extension GL_EXT_draw_buffers : enable \n' : '') +
+                    'vec4 czm_gl_FragColor;\n' +
+                    'bool czm_discard = false;\n' +
+                    'varying float v_z;\n\n' +
+                    renamedFS + '\n\n' +
+                    'void main()\n' +
+                    '{\n' +
+                    '    czm_translucent_main();\n' +
+                    '    if (czm_discard)\n' +
+                    '    {\n' +
+                    '        discard;\n' +
+                    '    }\n' +
+                    source +
+                    '}\n';
+
+                shader = context.getShaderCache().getShaderProgram(vs, newSourceFS, attributeLocations);
+            }
             cache[id] = shader;
         }
 
         return shader;
     }
 
-    function getTranslucentMRTShaderProgram(that, context, shaderProgram) {
-        return getTranslucentShaderProgram(context, shaderProgram, that._translucentShaderCache, mrtShaderSource);
+    function getTranslucentMRTShaderProgram(that, context, shaderProgram, forceUpdate) {
+        return getTranslucentShaderProgram(that, context, shaderProgram, that._translucentShaderCache, mrtShaderSource, forceUpdate);
     }
 
-    function getTranslucentColorShaderProgram(that, context, shaderProgram) {
-        return getTranslucentShaderProgram(context, shaderProgram, that._translucentShaderCache, colorShaderSource);
+    function getTranslucentColorShaderProgram(that, context, shaderProgram, forceUpdate) {
+        return getTranslucentShaderProgram(that, context, shaderProgram, that._translucentShaderCache, colorShaderSource, forceUpdate);
     }
 
-    function getTranslucentAlphaShaderProgram(that, context, shaderProgram) {
-        return getTranslucentShaderProgram(context, shaderProgram, that._alphaShaderCache, alphaShaderSource);
+    function getTranslucentAlphaShaderProgram(that, context, shaderProgram, forceUpdate) {
+        return getTranslucentShaderProgram(that, context, shaderProgram, that._alphaShaderCache, alphaShaderSource, forceUpdate);
     }
 
-    function executeTranslucentCommandsSortedMultipass(that, scene, executeFunction, passState, commands) {
+    function executeTranslucentCommandsSortedMultipass(that, scene, executeFunction, passState, commands, forceUpdate) {
         var command;
         var renderState;
         var shaderProgram;
@@ -430,8 +508,8 @@ define([
 
         for (j = 0; j < length; ++j) {
             command = commands[j];
-            renderState = getTranslucentColorRenderState(that, context, command.renderState);
-            shaderProgram = getTranslucentColorShaderProgram(that, context, command.shaderProgram);
+            renderState = getTranslucentColorRenderState(that, context, command.renderState, forceUpdate);
+            shaderProgram = getTranslucentColorShaderProgram(that, context, command.shaderProgram, forceUpdate);
             executeFunction(command, scene, context, passState, renderState, shaderProgram, true);
         }
 
@@ -440,15 +518,15 @@ define([
 
         for (j = 0; j < length; ++j) {
             command = commands[j];
-            renderState = getTranslucentAlphaRenderState(that, context, command.renderState);
-            shaderProgram = getTranslucentAlphaShaderProgram(that, context, command.shaderProgram);
+            renderState = getTranslucentAlphaRenderState(that, context, command.renderState, forceUpdate);
+            shaderProgram = getTranslucentAlphaShaderProgram(that, context, command.shaderProgram, forceUpdate);
             executeFunction(command, scene, context, passState, renderState, shaderProgram, true);
         }
 
         passState.framebuffer = framebuffer;
     }
 
-    function executeTranslucentCommandsSortedMRT(that, scene, executeFunction, passState, commands) {
+    function executeTranslucentCommandsSortedMRT(that, scene, executeFunction, passState, commands, forceUpdate) {
         var context = scene._context;
         var framebuffer = passState.framebuffer;
         var length = commands.length;
@@ -460,8 +538,8 @@ define([
 
         for (var j = 0; j < length; ++j) {
             var command = commands[j];
-            var renderState = getTranslucentMRTRenderState(that, context, command.renderState);
-            var shaderProgram = getTranslucentMRTShaderProgram(that, context, command.shaderProgram);
+            var renderState = getTranslucentMRTRenderState(that, context, command.renderState, forceUpdate);
+            var shaderProgram = getTranslucentMRTShaderProgram(that, context, command.shaderProgram, forceUpdate);
             executeFunction(command, scene, context, passState, renderState, shaderProgram, true);
         }
 
@@ -473,12 +551,16 @@ define([
             return;
         }
 
+        var forceUpdate = this._weightFunction !== this.weightFunction || this._methodChanged;
+        this._weightFunction = this.weightFunction;
+        this._methodChanged = false;
+
         if (this._translucentMRTSupport) {
-            executeTranslucentCommandsSortedMRT(this, scene, executeFunction, passState, commands);
+            executeTranslucentCommandsSortedMRT(this, scene, executeFunction, passState, commands, forceUpdate);
             return;
         }
 
-        executeTranslucentCommandsSortedMultipass(this, scene, executeFunction, passState, commands);
+        executeTranslucentCommandsSortedMultipass(this, scene, executeFunction, passState, commands, forceUpdate);
     };
 
     OITResources.prototype.execute = function(context, passState) {

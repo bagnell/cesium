@@ -218,28 +218,28 @@ function showBoundingSpheres(show) {
     scene.initializeFrame();
     scene.render();
  
-    if (scene._translucentMRTSupport) {
+    if (scene._oitResources._translucentMRTSupport) {
         toggleOITMethod.push({
             text : 'OIT with Multiple Render Targets',
             onselect : function() {
-                scene._translucentMRTSupport = true;
-                scene._translucentMultipassSupport = false;
+                scene._oitResources._translucentMRTSupport = true;
+                scene._oitResources._translucentMultipassSupport = false;
             }
         });
     }
  
     // render another frame with MRT disabled to check for multipass support
-    scene._translucentMRTSupport = false;
-    scene._translucentMultipassSupport = true;
+    scene._oitResources._translucentMRTSupport = false;
+    scene._oitResources._translucentMultipassSupport = true;
     scene.initializeFrame();
     scene.render();
     
-    if (scene._translucentMultipassSupport) {
+    if (scene._oitResources._translucentMultipassSupport) {
         toggleOITMethod.push({
             text : 'OIT with Multiple Passes',
             onselect : function() {
-                scene._translucentMRTSupport = false;
-                scene._translucentMultipassSupport = true;
+                scene._oitResources._translucentMRTSupport = false;
+                scene._oitResources._translucentMultipassSupport = true;
             }
         });
     }
@@ -248,8 +248,8 @@ function showBoundingSpheres(show) {
     toggleOITMethod.push({
         text : 'Alpha Blending',
         onselect : function() {
-            scene._translucentMRTSupport = false;
-            scene._translucentMultipassSupport = false;
+            scene._oitResources._translucentMRTSupport = false;
+            scene._oitResources._translucentMultipassSupport = false;
         }
     });
  
@@ -299,7 +299,7 @@ function showBoundingSpheres(show) {
     
     var text = document.createElement('input');
     text.type = 'text';
-    text.value = scene.weightFunction;
+    text.value = scene._oitResources.weightFunction;
     text.setAttribute('spellcheck', 'false');
     text.style.cssText = 'background: rgba(30,30,30,0.7); color: #eee; padding: 2px 5px; border-radius: 4px; border: 1px solid #555; width: 95%;';
     document.getElementById('toolbar').appendChild(text);
@@ -309,14 +309,14 @@ function showBoundingSpheres(show) {
     errorElement.style.display = 'none';
     document.getElementById('toolbar').appendChild(errorElement);
     
-    scene.onError.addEventListener(function (message) {
+    scene._oitResources.onError.addEventListener(function (message) {
         errorElement.style.display = 'block';
         errorElement.textContent = message;
     });
     
     text.addEventListener('keydown', function(e) {
         if (e.keyCode === 13) {
-            scene.weightFunction = text.value;
+            scene._oitResources.weightFunction = text.value;
             errorElement.style.display = 'none';
         }
     });

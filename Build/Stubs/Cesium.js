@@ -646,6 +646,10 @@ define('Core/loadXML', function() {
     return Cesium['loadXML'];
 });
 
+define('Core/mergeSort', function() {
+    return Cesium['mergeSort'];
+});
+
 define('Core/parseResponseHeaders', function() {
     return Cesium['parseResponseHeaders'];
 });
@@ -896,6 +900,14 @@ define('DynamicScene/StaticGeometryPerMaterialBatch', function() {
 
 define('DynamicScene/StaticOutlineGeometryBatch', function() {
     return Cesium['StaticOutlineGeometryBatch'];
+});
+
+define('DynamicScene/StripeMaterialProperty', function() {
+    return Cesium['StripeMaterialProperty'];
+});
+
+define('DynamicScene/StripeOrientation', function() {
+    return Cesium['StripeOrientation'];
 });
 
 define('DynamicScene/TimeIntervalCollectionPositionProperty', function() {
@@ -1186,6 +1198,10 @@ define('Scene/ExtentPrimitive', function() {
     return Cesium['ExtentPrimitive'];
 });
 
+define('Scene/FXAAResources', function() {
+    return Cesium['FXAAResources'];
+});
+
 define('Scene/FrameState', function() {
     return Cesium['FrameState'];
 });
@@ -1296,6 +1312,10 @@ define('Scene/Moon', function() {
 
 define('Scene/NeverTileDiscardPolicy', function() {
     return Cesium['NeverTileDiscardPolicy'];
+});
+
+define('Scene/OITResources', function() {
+    return Cesium['OITResources'];
 });
 
 define('Scene/OpenStreetMapImageryProvider', function() {
@@ -1492,6 +1512,10 @@ define('Scene/createTangentSpaceDebugPrimitive', function() {
 
 define('Scene/sampleTerrain', function() {
     return Cesium['sampleTerrain'];
+});
+
+define('Shaders/AdjustTranslucentFS', function() {
+    return Cesium['AdjustTranslucentFS'];
 });
 
 define('Shaders/Appearances/AllMaterialAppearanceFS', function() {
