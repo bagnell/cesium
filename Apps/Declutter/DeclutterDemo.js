@@ -63,32 +63,28 @@ require({
         var values = dataSource.entities.values;
         var length = values.length;
 
+        var table = {};
+
         for (var i = 0; i < length; ++i) {
             var entity = values[i];
+
             if (defined(entity.billboard) && defined(entity.label)) {
-                entity.label.show = false;
+                var position = entity.position.getValue(viewer.clock.startTime);
+                var key = position.x.toString() + position.y.toString() + position.z.toString();
+
+                if (table[key]) {
+                    entity.label.show = false;
+                } else {
+                    entity.label.show = true;
+                    table[key] = true;
+                }
             }
         }
     });
 
     var scene = viewer.scene;
 
-    function wgs84ToWindowCoordinates(position) {
-        var actualPosition = SceneTransforms.computeActualWgs84Position(scene.frameState, position);
-        var camera = scene.camera;
-        var viewProjection = Matrix4.multiply(camera.frustum.projectionMatrix, camera.viewMatrix, new Matrix4());
-        var positionCC = new Cartesian4();
-        Matrix4.multiplyByVector(viewProjection, Cartesian4.fromElements(actualPosition.x, actualPosition.y, actualPosition.z, 1.0, positionCC), positionCC);
-
-        var result = new Cartesian3();
-        SceneTransforms.clipToGLWindowCoordinates(scene, positionCC, result);
-        result.y = scene.canvas.clientHeight - result.y;
-        result.z = positionCC.z / positionCC.w;
-        return result;
-    }
-
     var pickedEntities;
-    var lines;
     var linePrimitive;
     var radius;
     var centerPosition = new Cartesian3();
@@ -99,8 +95,24 @@ require({
         if (!defined(pickedEntities)) {
             var pickedObjects = scene.drillPick(movement.position);
             if (defined(pickedObjects) && pickedObjects.length > 1) {
+                var billboards = [];
+
+                var i;
+                var object;
+
+                for (i = 0; i < pickedObjects.length; ++i) {
+                    object = pickedObjects[i];
+                    if (object.primitive instanceof Billboard) {
+                        billboards.push(object);
+                    }
+                }
+
+                if (billboards.length < 2) {
+                    return;
+                }
+
                 pickedEntities = [];
-                lines = [];
+                var lines = [];
 
                 var angle = 0.0;
                 var angleIncrease;
@@ -108,8 +120,8 @@ require({
                 var magIncrease;
                 var maxDimension;
 
-                for (var i = 0; i < pickedObjects.length; ++i) {
-                    var object = pickedObjects[i];
+                for (i = 0; i < billboards.length; ++i) {
+                    object = billboards[i];
                     if (object.primitive instanceof Billboard) {
                         if (pickedEntities.length === 0) {
                             Cartesian3.clone(object.primitive.position, centerPosition);
@@ -135,11 +147,12 @@ require({
                             object.id.label.pixelOffset = offset;
                         }
 
-                        var position = wgs84ToWindowCoordinates(object.primitive.position);
+                        var position = SceneTransforms.wgs84ToWindowCoordinates(scene, object.primitive.position);
                         position.x += offset.x;
                         position.y += offset.y;
-                        var worldPosition = SceneTransforms.drawingBufferToWgs84Coordinates(scene, position, position.z);
-                        lines.push(worldPosition);
+                        SceneTransforms.transformWindowToDrawingBuffer(scene, position, position);
+                        position.y = scene.drawingBufferHeight - position.y;
+                        lines.push(SceneTransforms.drawingBufferToWgs84Coordinates(scene, position, 0.0));
 
                         angle += angleIncrease;
                         if (angle + angleIncrease * 0.5 > CesiumMath.TWO_PI) {
@@ -152,6 +165,12 @@ require({
 
                 var instances = [];
                 for (var j = 0; j < lines.length; ++j) {
+                    var entity = pickedEntities[j].id;
+                    if (defined(entity.label)) {
+                        entity.label.show = true;//false;
+                        entity.label.eyeOffset = new Cartesian3(0.0, 0.0, -100.0);
+                    }
+
                     instances.push(new GeometryInstance({
                         geometry : new SimplePolylineGeometry({
                             positions : [centerPosition, lines[j]],
@@ -170,21 +189,20 @@ require({
                         flat : true,
                         translucent : false
                     }),
-                    asynchronous : true
+                    asynchronous : false
                 }));
 
-                lines = undefined;
                 viewer.selectedEntity = undefined;
                 radius = magnitude + magIncrease;
             }
         }
     }, ScreenSpaceEventType.LEFT_CLICK);
 
-    scene.camera.moveStart.addEventListener(function() {
+    function undoStarBurst() {
         if (!defined(radius)) {
             return;
         }
-        
+
         for (var i = 0; i < pickedEntities.length; ++i) {
             var entity = pickedEntities[i].id;
             entity.billboard.pixelOffset = new Cartesian2(0.0, 0.0);
@@ -193,12 +211,26 @@ require({
                 entity.label.show = false;
             }
         }
+
+        for (var j = 0; j < pickedEntities.length; ++j) {
+            var entity = pickedEntities[j].id;
+            if (defined(entity.label)) {
+                entity.label.show = true;
+                break;
+            }
+        }
+
         scene.primitives.remove(linePrimitive);
         linePrimitive = undefined;
         pickedEntities = undefined;
         radius = undefined;
+    }
+
+    scene.camera.moveStart.addEventListener(function() {
+        undoStarBurst();
     });
 
+    /*
     var currentObject;
 
     handler.setInputAction(function(movement) {
@@ -207,18 +239,7 @@ require({
 
             var position = movement.endPosition;
             if (Cartesian2.distance(position, screenPosition) > radius) {
-                for (var i = 0; i < pickedEntities.length; ++i) {
-                    var entity = pickedEntities[i].id;
-                    entity.billboard.pixelOffset = new Cartesian2(0.0, 0.0);
-                    if (defined(entity.label)) {
-                        entity.label.pixelOffset = new Cartesian2(0.0, 0.0);
-                        entity.label.show = false;
-                    }
-                }
-                scene.primitives.remove(linePrimitive);
-                linePrimitive = undefined;
-                pickedEntities = undefined;
-                radius = undefined;
+                undoStarBurst();
             } else {
                 var pickedObject = scene.pick(movement.endPosition);
                 if (pickedObject !== currentObject) {
@@ -238,6 +259,7 @@ require({
             }
         }
     }, ScreenSpaceEventType.MOUSE_MOVE);
+    */
 
     loadingIndicator.style.display = 'none';
 });
