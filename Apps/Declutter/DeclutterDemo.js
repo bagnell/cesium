@@ -117,7 +117,7 @@ require({
         center : undefined,
         screenCenter : undefined,
         pixelPadding : 10.0,
-        maxDimension : undefined
+        boundingRectangle : undefined
     };
 
     function offsetBillboard(entity, entityPosition, x, y, lines, billboardEyeOffsets, labelEyeOffsets) {
@@ -281,6 +281,12 @@ require({
             ++i;
         }
 
+        var rect = new BoundingRectangle();
+        rect.x = starBurstState.screenCenter.x - starBurstState.pixelPadding * 2.0;
+        rect.width = x + maxWidthWithLabels * 2.0;
+        starBurstState.boundingRectangle = rect;
+
+
         // Add lines from the pick center out to the translated billboard.
         var instances = [];
         length = lines.length;
@@ -332,17 +338,11 @@ require({
 
         // Remove the star burst if the mouse exits the screen space circle.
         // If the mouse is inside the circle, show the label of the billboard the mouse is hovering over.
-        var screenPosition = SceneTransforms.wgs84ToWindowCoordinates(scene, starBurstState.center);
-        var fromCenter = Cartesian2.subtract(mousePosition, screenPosition, new Cartesian2());
-        var radius = starBurstState.radius;
 
-        /*
-        if (Cartesian2.magnitudeSquared(fromCenter) > radius * radius || fromCenter.y > 3.0 * (starBurstState.maxDimension + starBurstState.pixelPadding)) {
+        var boundingRectangle = starBurstState.boundingRectangle;
+        if (mousePosition.x < boundingRectangle.x || mousePosition.x > boundingRectangle.x + boundingRectangle.width) {
             undoStarBurst();
-        } else {
-            showLabels(mousePosition);
         }
-        */
     }
 
     function undoStarBurst() {
@@ -372,7 +372,6 @@ require({
         starBurstState.pickedEntities = undefined;
         starBurstState.billboardEyeOffsets = undefined;
         starBurstState.labelEyeOffsets = undefined;
-        starBurstState.radius = undefined;
         starBurstState.enabled = false;
     }
 
