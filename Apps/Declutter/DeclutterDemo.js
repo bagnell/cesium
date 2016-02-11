@@ -6,28 +6,29 @@ require({
                 Cesium : '../../Source'
             }
         }, [
-    'Cesium/Core/BoundingRectangle',
-    'Cesium/Core/Cartesian2',
-    'Cesium/Core/Cartesian3',
-    'Cesium/Core/Cartesian4',
-    'Cesium/Core/Color',
-    'Cesium/Core/ColorGeometryInstanceAttribute',
-    'Cesium/Core/defined',
-    'Cesium/Core/GeometryInstance',
-    'Cesium/Core/Math',
-    'Cesium/Core/Matrix4',
-    'Cesium/Core/ScreenSpaceEventHandler',
-    'Cesium/Core/ScreenSpaceEventType',
-    'Cesium/Core/SimplePolylineGeometry',
-    'Cesium/DataSources/KmlDataSource',
-    'Cesium/Scene/Billboard',
-    'Cesium/Scene/PerInstanceColorAppearance',
-    'Cesium/Scene/Primitive',
-    'Cesium/Scene/SceneTransforms',
-    'Cesium/ThirdParty/when',
-    'Cesium/Widgets/Viewer/Viewer',
-    'domReady!'
-], function(
+            'Cesium/Core/BoundingRectangle',
+            'Cesium/Core/Cartesian2',
+            'Cesium/Core/Cartesian3',
+            'Cesium/Core/Cartesian4',
+            'Cesium/Core/Color',
+            'Cesium/Core/ColorGeometryInstanceAttribute',
+            'Cesium/Core/defined',
+            'Cesium/Core/GeometryInstance',
+            'Cesium/Core/Math',
+            'Cesium/Core/Matrix4',
+            'Cesium/Core/ScreenSpaceEventHandler',
+            'Cesium/Core/ScreenSpaceEventType',
+            'Cesium/Core/SimplePolylineGeometry',
+            'Cesium/DataSources/KmlDataSource',
+            'Cesium/Scene/Billboard',
+            'Cesium/Scene/LabelCollection',
+            'Cesium/Scene/PerInstanceColorAppearance',
+            'Cesium/Scene/Primitive',
+            'Cesium/Scene/SceneTransforms',
+            'Cesium/ThirdParty/when',
+            'Cesium/Widgets/Viewer/Viewer',
+            'domReady!'
+        ], function(
     BoundingRectangle,
     Cartesian2,
     Cartesian3,
@@ -43,6 +44,7 @@ require({
     SimplePolylineGeometry,
     KmlDataSource,
     Billboard,
+    LabelCollection,
     PerInstanceColorAppearance,
     Primitive,
     SceneTransforms,
@@ -50,216 +52,329 @@ require({
     Viewer) {
     "use strict";
 
-
     var loadingIndicator = document.getElementById('loadingIndicator');
     var viewer = new Viewer('cesiumContainer', {
         selectionIndicator : false
     });
 
+    var scene = viewer.scene;
+    var camera = scene.camera;
+    var handler = new ScreenSpaceEventHandler(scene.canvas);
+
     var kmlPromise = KmlDataSource.load('./KML/mcs.kmz');
     viewer.dataSources.add(kmlPromise);
 
     when(kmlPromise).then(function(dataSource) {
-        var values = dataSource.entities.values;
-        var length = values.length;
+        var removeEventListener = scene.postRender.addEventListener(function() {
+            var values = dataSource.entities.values;
+            var length = values.length;
 
-        var table = {};
+            var table = {};
 
-        for (var i = 0; i < length; ++i) {
-            var entity = values[i];
+            for (var i = 0; i < length; ++i) {
+                var entity = values[i];
 
-            if (defined(entity.billboard) && defined(entity.label)) {
-                var position = entity.position.getValue(viewer.clock.startTime);
-                var key = position.x.toString() + position.y.toString() + position.z.toString();
+                if (defined(entity.billboard) && defined(entity.label)) {
+                    var position = entity.position.getValue(viewer.clock.startTime);
+                    var key = position.x.toString() + position.y.toString() + position.z.toString();
 
-                if (table[key]) {
-                    entity.label.show = false;
-                } else {
-                    entity.label.show = true;
-                    table[key] = true;
+                    if (table[key]) {
+                        entity.label.show = false;
+                    } else {
+                        entity.label.show = true;
+                        table[key] = true;
+                    }
                 }
             }
-        }
+
+            handler.setInputAction(function(movement) {
+                // Star burst on left mouse click.
+                starBurst(movement.position);
+            }, ScreenSpaceEventType.LEFT_CLICK);
+
+            handler.setInputAction(function(movement) {
+                // Remove the star burst when the mouse exits the circle or show the label of the billboard the mouse is hovering over.
+                updateStarBurst(movement.endPosition);
+            }, ScreenSpaceEventType.MOUSE_MOVE);
+
+            camera.moveStart.addEventListener(function() {
+                // Reset the star burst on camera move because the lines from the center
+                // because the line end points rely on the screen space positions of the billboards.
+                undoStarBurst();
+            });
+
+            removeEventListener();
+        });
     });
 
-    var scene = viewer.scene;
+    // State saved across mouse click and move events
+    var starBurstState = {
+        enabled : false,
+        pickedEntities : undefined,
+        billboardEyeOffsets : undefined,
+        labelEyeOffsets : undefined,
+        linePrimitive : undefined,
+        center : undefined,
+        screenCenter : undefined,
+        pixelPadding : 10.0,
+        maxDimension : undefined
+    };
 
-    var pickedEntities;
-    var linePrimitive;
-    var radius;
-    var centerPosition = new Cartesian3();
-    var padding = 10.0;
+    function offsetBillboard(entity, entityPosition, x, y, lines, billboardEyeOffsets, labelEyeOffsets) {
+        var offset = new Cartesian2(x, y);
 
-    var handler = new ScreenSpaceEventHandler(scene.canvas);
-    handler.setInputAction(function(movement) {
-        if (!defined(pickedEntities)) {
-            var pickedObjects = scene.drillPick(movement.position);
-            if (defined(pickedObjects) && pickedObjects.length > 1) {
-                var billboards = [];
+        var drawingBufferWidth = scene.drawingBufferWidth;
+        var drawingBufferHeight = scene.drawingBufferHeight;
 
-                var i;
-                var object;
+        var diff = Cartesian3.subtract(entityPosition, camera.positionWC, new Cartesian3());
+        var distance = Cartesian3.dot(camera.directionWC, diff);
 
-                for (i = 0; i < pickedObjects.length; ++i) {
-                    object = pickedObjects[i];
-                    if (object.primitive instanceof Billboard) {
-                        billboards.push(object);
+        var dimensions = camera.frustum.getPixelDimensions(drawingBufferWidth, drawingBufferHeight, distance, new Cartesian2());
+        Cartesian2.multiplyByScalar(offset, Cartesian2.maximumComponent(dimensions), offset);
+
+        var labelOffset;
+        var billboardOffset = entity.billboard.eyeOffset;
+
+        var eyeOffset = new Cartesian3(offset.x, offset.y, 0.0);
+        entity.billboard.eyeOffset = eyeOffset;
+        if (defined(entity.label)) {
+            labelOffset = entity.label.eyeOffset;
+            entity.label.eyeOffset = new Cartesian3(offset.x, offset.y, -10.0);
+        }
+
+        var endPoint = Matrix4.multiplyByPoint(camera.viewMatrix, entityPosition, new Cartesian3());
+        Cartesian3.add(eyeOffset, endPoint, endPoint);
+        Matrix4.multiplyByPoint(camera.inverseViewMatrix, endPoint, endPoint);
+        lines.push(endPoint);
+
+        billboardEyeOffsets.push(billboardOffset);
+        labelEyeOffsets.push(labelOffset);
+    }
+
+    var labelWidthCache = {};
+
+    function labelPixelWidth(entity) {
+        var key = entity.label.text;
+        var cachedValue = labelWidthCache[key];
+        if (defined(cachedValue)) {
+            return cachedValue;
+        }
+
+        var label;
+
+        var primitives = scene.primitives;
+        var length = primitives.length;
+        for (var i = 0; i < length; ++i) {
+            var primitive = primitives.get(i);
+            if (primitive instanceof LabelCollection) {
+                var collectionLength = primitive.length;
+                for (var j = 0; j < collectionLength; ++j) {
+                    var l = primitive.get(j);
+                    if (l.id === entity) {
+                        label = l;
+                        break;
                     }
                 }
-
-                if (billboards.length < 2) {
-                    return;
-                }
-
-                pickedEntities = [];
-                var lines = [];
-
-                var angle = 0.0;
-                var angleIncrease;
-                var magnitude;
-                var magIncrease;
-                var maxDimension;
-
-                for (i = 0; i < billboards.length; ++i) {
-                    object = billboards[i];
-                    if (object.primitive instanceof Billboard) {
-                        if (pickedEntities.length === 0) {
-                            Cartesian3.clone(object.primitive.position, centerPosition);
-                        }
-
-                        pickedEntities.push(object);
-
-                        if (!defined(angleIncrease)) {
-                            var width = object.primitive.width;
-                            var height = object.primitive.height;
-                            maxDimension = Math.max(width, height) + padding;
-                            magnitude = maxDimension + maxDimension * 0.5;
-                            magIncrease = magnitude;
-                            angleIncrease = maxDimension / magnitude;
-                        }
-
-                        var x = magnitude * Math.cos(angle);
-                        var y = magnitude * Math.sin(angle);
-
-                        var offset = new Cartesian2(x, -y);
-                        object.id.billboard.pixelOffset = offset;
-                        if (defined(object.id.label)) {
-                            object.id.label.pixelOffset = offset;
-                        }
-
-                        var position = SceneTransforms.wgs84ToWindowCoordinates(scene, object.primitive.position);
-                        position.x += offset.x;
-                        position.y += offset.y;
-                        SceneTransforms.transformWindowToDrawingBuffer(scene, position, position);
-                        position.y = scene.drawingBufferHeight - position.y;
-                        lines.push(SceneTransforms.drawingBufferToWgs84Coordinates(scene, position, 0.0));
-
-                        angle += angleIncrease;
-                        if (angle + angleIncrease * 0.5 > CesiumMath.TWO_PI) {
-                            magnitude += magIncrease;
-                            angle = 0.0;
-                            angleIncrease = maxDimension / magnitude;
-                        }
-                    }
-                }
-
-                var instances = [];
-                for (var j = 0; j < lines.length; ++j) {
-                    var entity = pickedEntities[j].id;
-                    if (defined(entity.label)) {
-                        entity.label.show = true;//false;
-                        entity.label.eyeOffset = new Cartesian3(0.0, 0.0, -100.0);
-                    }
-
-                    instances.push(new GeometryInstance({
-                        geometry : new SimplePolylineGeometry({
-                            positions : [centerPosition, lines[j]],
-                            followSurface : false,
-                            granularity : CesiumMath.PI_OVER_FOUR
-                        }),
-                        attributes : {
-                            color : ColorGeometryInstanceAttribute.fromColor(Color.WHITE)
-                        }
-                    }));
-                }
-
-                linePrimitive = scene.primitives.add(new Primitive({
-                    geometryInstances : instances,
-                    appearance : new PerInstanceColorAppearance({
-                        flat : true,
-                        translucent : false
-                    }),
-                    asynchronous : false
-                }));
-
-                viewer.selectedEntity = undefined;
-                radius = magnitude + magIncrease;
             }
         }
-    }, ScreenSpaceEventType.LEFT_CLICK);
 
-    function undoStarBurst() {
-        if (!defined(radius)) {
+        if (!defined(label)) {
+            return 0;
+        }
+
+        var width = 0;
+        var glyphs = label._glyphs;
+        length = glyphs.length;
+        for (var k = 0; k < length; ++k) {
+            width += glyphs[k].billboard.width;
+        }
+
+        labelWidthCache[key] = width;
+        return width;
+    }
+
+    function starBurst(mousePosition) {
+        if (defined(starBurstState.pickedEntities)) {
             return;
         }
 
+        var pickedObjects = scene.drillPick(mousePosition);
+        if (!defined(pickedObjects) || pickedObjects.length < 2) {
+            return;
+        }
+
+        var billboardEntities = [];
+        var length = pickedObjects.length;
+        var i;
+
+        for (i = 0; i < length; ++i) {
+            var pickedObject = pickedObjects[i];
+            if (pickedObject.primitive instanceof Billboard) {
+                billboardEntities.push(pickedObject);
+            }
+        }
+
+        if (billboardEntities.length === 0) {
+            return;
+        }
+
+        var pickedEntities = starBurstState.pickedEntities = [];
+        var billboardEyeOffsets = starBurstState.billboardEyeOffsets = [];
+        var labelEyeOffsets = starBurstState.labelEyeOffsets = [];
+        var lines = [];
+        starBurstState.maxDimension = Number.NEGATIVE_INFINITY;
+
+        var maxDimension;
+        var maxWidthWithLabels;
+
+        var x;
+        var y;
+
+        var canvasHeight = scene.canvas.clientHeight;
+
+        // Drill pick gets all of the entities under the mouse pointer.
+        // Find the billboards and set their pixel offsets in a circle pattern.
+        length = billboardEntities.length;
+        i = 0;
+        while (i < length) {
+            var object = billboardEntities[i];
+            if (pickedEntities.length === 0) {
+                starBurstState.center = Cartesian3.clone(object.primitive.position);
+                starBurstState.screenCenter = SceneTransforms.wgs84ToWindowCoordinates(scene, starBurstState.center);
+            }
+
+            if (!defined(x)) {
+                var width = object.primitive.width;
+                var height = object.primitive.height;
+                maxDimension = Math.max(width, height) * object.primitive.scale + starBurstState.pixelPadding;
+                maxWidthWithLabels = maxDimension;
+                x = maxDimension;
+                y = 0;
+            }
+
+            offsetBillboard(object.id, object.primitive.position, x, y, lines, billboardEyeOffsets, labelEyeOffsets);
+            pickedEntities.push(object);
+
+            maxWidthWithLabels = Math.max(maxWidthWithLabels, object.primitive.width);
+            if (defined(object.id.label)) {
+                maxWidthWithLabels = Math.max(maxWidthWithLabels, labelPixelWidth(object.id));
+            }
+
+            if (i + 1 < length && y > 0 && starBurstState.screenCenter.y + y < canvasHeight) {
+                object = billboardEntities[++i];
+                offsetBillboard(object.id, object.primitive.position, x, -y, lines, billboardEyeOffsets, labelEyeOffsets);
+                pickedEntities.push(object);
+
+                maxWidthWithLabels = Math.max(maxWidthWithLabels, object.primitive.width);
+                if (defined(object.id.label)) {
+                    maxWidthWithLabels = Math.max(maxWidthWithLabels, labelPixelWidth(object.id));
+                }
+            }
+
+            y += maxDimension;
+            if (starBurstState.screenCenter.y - y < 0) {
+                x += maxWidthWithLabels * 1.5;
+                y = 0;
+                maxWidthWithLabels = 0;
+            }
+
+            ++i;
+        }
+
+        // Add lines from the pick center out to the translated billboard.
+        var instances = [];
+        length = lines.length;
+        for (i = 0; i < length; ++i) {
+            var pickedEntity = pickedEntities[i];
+            starBurstState.maxDimension = Math.max(pickedEntity.primitive.width, pickedEntity.primitive.height, starBurstState.maxDimension);
+
+            if (defined(pickedEntity.id.label)) {
+                pickedEntity.id.label.show = true;
+            }
+
+            instances.push(new GeometryInstance({
+                geometry : new SimplePolylineGeometry({
+                    positions : [starBurstState.center, lines[i]],
+                    followSurface : false,
+                    granularity : CesiumMath.PI_OVER_FOUR
+                }),
+                attributes : {
+                    color : ColorGeometryInstanceAttribute.fromColor(Color.WHITE)
+                }
+            }));
+        }
+
+        starBurstState.linePrimitive = scene.primitives.add(new Primitive({
+            geometryInstances : instances,
+            appearance : new PerInstanceColorAppearance({
+                flat : true,
+                translucent : false
+            }),
+            asynchronous : false
+        }));
+
+        viewer.selectedEntity = undefined;
+        starBurstState.x = x;
+        starBurstState.y = y;
+    }
+
+    function updateStarBurst(mousePosition) {
+        if (!defined(starBurstState.pickedEntities)) {
+            return;
+        }
+
+        if (!starBurstState.enabled) {
+            // For some reason we get a mousemove event on click, so
+            // do not show a label on the first event.
+            starBurstState.enabled = true;
+            return;
+        }
+
+        // Remove the star burst if the mouse exits the screen space circle.
+        // If the mouse is inside the circle, show the label of the billboard the mouse is hovering over.
+        var screenPosition = SceneTransforms.wgs84ToWindowCoordinates(scene, starBurstState.center);
+        var fromCenter = Cartesian2.subtract(mousePosition, screenPosition, new Cartesian2());
+        var radius = starBurstState.radius;
+
+        /*
+        if (Cartesian2.magnitudeSquared(fromCenter) > radius * radius || fromCenter.y > 3.0 * (starBurstState.maxDimension + starBurstState.pixelPadding)) {
+            undoStarBurst();
+        } else {
+            showLabels(mousePosition);
+        }
+        */
+    }
+
+    function undoStarBurst() {
+        var pickedEntities = starBurstState.pickedEntities;
+        if (!defined(pickedEntities)) {
+            return;
+        }
+
+        var billboardEyeOffsets = starBurstState.billboardEyeOffsets;
+        var labelEyeOffsets = starBurstState.labelEyeOffsets;
+
+        // Reset billboard and label pixel offsets.
+        // Hide overlapping labels.
         for (var i = 0; i < pickedEntities.length; ++i) {
             var entity = pickedEntities[i].id;
-            entity.billboard.pixelOffset = new Cartesian2(0.0, 0.0);
+            entity.billboard.eyeOffset = billboardEyeOffsets[i];
             if (defined(entity.label)) {
-                entity.label.pixelOffset = new Cartesian2(0.0, 0.0);
+                entity.label.eyeOffset = labelEyeOffsets[i];
                 entity.label.show = false;
             }
         }
 
-        for (var j = 0; j < pickedEntities.length; ++j) {
-            var entity = pickedEntities[j].id;
-            if (defined(entity.label)) {
-                entity.label.show = true;
-                break;
-            }
-        }
-
-        scene.primitives.remove(linePrimitive);
-        linePrimitive = undefined;
-        pickedEntities = undefined;
-        radius = undefined;
+        // Remove lines from the scene.
+        // Free resources and reset state.
+        scene.primitives.remove(starBurstState.linePrimitive);
+        starBurstState.linePrimitive = undefined;
+        starBurstState.pickedEntities = undefined;
+        starBurstState.billboardEyeOffsets = undefined;
+        starBurstState.labelEyeOffsets = undefined;
+        starBurstState.radius = undefined;
+        starBurstState.enabled = false;
     }
-
-    scene.camera.moveStart.addEventListener(function() {
-        undoStarBurst();
-    });
-
-    /*
-    var currentObject;
-
-    handler.setInputAction(function(movement) {
-        if (defined(radius)) {
-            var screenPosition = SceneTransforms.wgs84ToWindowCoordinates(scene, centerPosition);
-
-            var position = movement.endPosition;
-            if (Cartesian2.distance(position, screenPosition) > radius) {
-                undoStarBurst();
-            } else {
-                var pickedObject = scene.pick(movement.endPosition);
-                if (pickedObject !== currentObject) {
-                    if (defined(pickedObject) && pickedObject.primitive instanceof Billboard && defined(pickedObject.id.label)) {
-                        if (defined(currentObject)) {
-                            currentObject.id.label.show = false;
-                        }
-
-                        currentObject = pickedObject;
-                        pickedObject.id.label.show = true;
-                        pickedObject.id.label.eyeOffset = new Cartesian3(0.0, 0.0, -100.0);
-                    } else if (defined(currentObject)) {
-                        currentObject.id.label.show = false;
-                        currentObject = undefined;
-                    }
-                }
-            }
-        }
-    }, ScreenSpaceEventType.MOUSE_MOVE);
-    */
 
     loadingIndicator.style.display = 'none';
 });
