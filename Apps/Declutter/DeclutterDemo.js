@@ -68,6 +68,7 @@ require({
         var removeEventListener = scene.postRender.addEventListener(function() {
             var values = dataSource.entities.values;
             var length = values.length;
+            var time = viewer.clock.startTime;
 
             var table = {};
 
@@ -75,7 +76,7 @@ require({
                 var entity = values[i];
 
                 if (defined(entity.billboard) && defined(entity.label)) {
-                    var position = entity.position.getValue(viewer.clock.startTime);
+                    var position = entity.position.getValue(time);
                     var key = position.x.toString() + position.y.toString() + position.z.toString();
 
                     if (table[key]) {
@@ -84,6 +85,10 @@ require({
                         entity.label.show = true;
                         table[key] = true;
                     }
+
+                    var translucency = entity.label.translucencyByDistance.getValue(time);
+                    translucency.far = translucency.near + 1.0;
+                    entity.label.translucencyByDistance = translucency;
                 }
             }
 
@@ -375,6 +380,14 @@ require({
             if (defined(entity.label)) {
                 entity.label.eyeOffset = labelEyeOffsets[i];
                 entity.label.show = false;
+            }
+        }
+
+        for (var j = 0; j < pickedEntities.length; ++j) {
+            var entity = pickedEntities[j].id;
+            if (defined(entity.label)) {
+                entity.label.show = true;
+                break;
             }
         }
 
