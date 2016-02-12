@@ -252,12 +252,25 @@ require({
                 y = 0;
             }
 
-            offsetBillboard(object.id, object.primitive.position, x, y, lines, billboardEyeOffsets, labelEyeOffsets);
-            pickedEntities.push(object);
+            if (starBurstState.screenCenter.y - y > 0) {
+                offsetBillboard(object.id, object.primitive.position, x, y, lines, billboardEyeOffsets, labelEyeOffsets);
+                pickedEntities.push(object);
 
-            maxWidthWithLabels = Math.max(maxWidthWithLabels, object.primitive.width);
-            if (defined(object.id.label)) {
-                maxWidthWithLabels = Math.max(maxWidthWithLabels, labelPixelWidth(object.id));
+                maxWidthWithLabels = Math.max(maxWidthWithLabels, object.primitive.width);
+                if (defined(object.id.label)) {
+                    maxWidthWithLabels = Math.max(maxWidthWithLabels, labelPixelWidth(object.id));
+                }
+            } else if (starBurstState.screenCenter.y + y < canvasHeight) {
+                object = billboardEntities[i];
+                offsetBillboard(object.id, object.primitive.position, x, -y, lines, billboardEyeOffsets, labelEyeOffsets);
+                pickedEntities.push(object);
+
+                maxWidthWithLabels = Math.max(maxWidthWithLabels, object.primitive.width);
+                if (defined(object.id.label)) {
+                    maxWidthWithLabels = Math.max(maxWidthWithLabels, labelPixelWidth(object.id));
+                }
+
+                y += maxDimension;
             }
 
             if (i + 1 < length && y > 0 && starBurstState.screenCenter.y + y < canvasHeight) {
@@ -272,7 +285,7 @@ require({
             }
 
             y += maxDimension;
-            if (starBurstState.screenCenter.y - y < 0) {
+            if (starBurstState.screenCenter.y - y < 0 && starBurstState.screenCenter.y + y > canvasHeight) {
                 x += maxWidthWithLabels * 1.5;
                 y = 0;
                 maxWidthWithLabels = 0;
