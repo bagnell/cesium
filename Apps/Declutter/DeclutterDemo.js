@@ -302,6 +302,8 @@ require({
         var rect = new BoundingRectangle();
         rect.x = starBurstState.screenCenter.x - starBurstState.pixelPadding * 2.0;
         rect.width = x + maxWidthWithLabels * 2.0;
+        rect.y = starBurstState.screenCenter.y - y - starBurstState.pixelPadding * 2.0;
+        rect.height = 2.0 * y;
         starBurstState.boundingRectangle = rect;
 
 
@@ -358,7 +360,8 @@ require({
         // If the mouse is inside the circle, show the label of the billboard the mouse is hovering over.
 
         var boundingRectangle = starBurstState.boundingRectangle;
-        if (mousePosition.x < boundingRectangle.x || mousePosition.x > boundingRectangle.x + boundingRectangle.width) {
+        if (mousePosition.x < boundingRectangle.x || mousePosition.x > boundingRectangle.x + boundingRectangle.width ||
+            mousePosition.y < boundingRectangle.y || mousePosition.y > boundingRectangle.y + boundingRectangle.height) {
             undoStarBurst();
         }
     }
