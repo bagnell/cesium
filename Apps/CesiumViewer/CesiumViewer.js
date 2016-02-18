@@ -11,6 +11,7 @@ define([
         'Cesium/DataSources/GeoJsonDataSource',
         'Cesium/DataSources/KmlDataSource',
         'Cesium/Scene/createTileMapServiceImageryProvider',
+        'Cesium/Scene/SceneMode',
         'Cesium/Widgets/Viewer/Viewer',
         'Cesium/Widgets/Viewer/viewerCesiumInspectorMixin',
         'Cesium/Widgets/Viewer/viewerDragDropMixin',
@@ -27,6 +28,7 @@ define([
         GeoJsonDataSource,
         KmlDataSource,
         createTileMapServiceImageryProvider,
+        SceneMode,
         Viewer,
         viewerCesiumInspectorMixin,
         viewerDragDropMixin) {
@@ -56,9 +58,10 @@ define([
     var viewer;
     try {
         viewer = new Viewer('cesiumContainer', {
+            //sceneMode : SceneMode.SCENE2D,
             imageryProvider : imageryProvider,
             baseLayerPicker : !defined(imageryProvider),
-            scene3DOnly : endUserOptions.scene3DOnly
+            //scene3DOnly : endUserOptions.scene3DOnly
         });
     } catch (exception) {
         loadingIndicator.style.display = 'none';
