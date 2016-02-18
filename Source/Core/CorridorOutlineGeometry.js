@@ -33,7 +33,7 @@ define([
         CesiumMath,
         PolylinePipeline,
         PrimitiveType) {
-    "use strict";
+    'use strict';
 
     var cartesian1 = new Cartesian3();
     var cartesian2 = new Cartesian3();
@@ -316,8 +316,6 @@ define([
      * @param {CornerType} [options.cornerType=CornerType.ROUNDED] Determines the style of the corners.
      *
      * @see CorridorOutlineGeometry.createGeometry
-     *
-     * @demo {@link http://cesiumjs.org/Cesium/Apps/Sandcastle/index.html?src=Corridor%20Outline.html|Cesium Sandcastle Corridor Outline Demo}
      *
      * @example
      * var corridor = new Cesium.CorridorOutlineGeometry({

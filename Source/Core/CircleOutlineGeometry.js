@@ -13,7 +13,7 @@ define([
         DeveloperError,
         EllipseOutlineGeometry,
         Ellipsoid) {
-    "use strict";
+    'use strict';
 
     /**
      * A description of the outline of a circle on the ellipsoid.
@@ -35,8 +35,6 @@ define([
      *
      * @see CircleOutlineGeometry.createGeometry
      * @see Packable
-     *
-     * @demo {@link http://cesiumjs.org/Cesium/Apps/Sandcastle/index.html?src=Circle%20Outline.html|Cesium Sandcastle Circle Outline Demo}
      *
      * @example
      * // Create a circle.

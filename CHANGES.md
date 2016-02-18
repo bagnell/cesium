@@ -1,16 +1,36 @@
 Change Log
 ==========
 
-### 1.18 - 2016-02-01
-
+### 1.19 - 2016-03-01
 * Breaking changes
-    * Removed support for `CESIUM_binary_glTF`. Use `KHR_binary_glTF` instead.
+   * Functionality changed in `PolygonGeometry` that changes the `Cartesian3` values of `options.positions` so that they are on the ellipsoid surface.  This will only effect you if your polygons are drawn synchronously with `options.perPositionHeight = false`, your positions have a non-zero height, and you are using the same positions for multiple entities.  In this case, make a copy of the `Cartesian3` values used for the polygon positions.
+* Deprecated
+   * Deprecated `definedNotNull`. It will be removed in 1.20. Use `defined` instead, which now checks for `null` as well as `undefined`.
+   * Deprecated KmlDataSource taking a proxy object. It will throw an exception in 1.21. It now should take a options object with camera and canvas as required parameters.
+* `Viewer.zoomTo` and `Viewer.flyTo` now accept an `ImageryLayer` instance as a valid parameter and will zoom to the extent of the imagery.
+* Fixed bug for causing `navigator is not defined` reference error in node
+* Added `Camera.flyHome` function for resetting the camera to the home view
+* Added `show` property to `CzmlDataSource`, `GeoJsonDataSource`, `KmlDataSource`, `CustomDataSource`, and `EntityCollection` for easily toggling display of entire data sources.
+* Fix an issue when changing a billboard's position property multiple times per frame. [#3511](https://github.com/AnalyticalGraphicsInc/cesium/pull/3511)
+* Fixed texture coordinates for polygon with position heights
+* Improved KML support
+    * Added support for `NetworkLink` refresh modes `onInterval`, `onExpire` and `onStop`. Includes support for `viewboundScale`, `viewFormat`, `httpQuery`.
+    * Added partial support for `NetworkLinkControl` including `minRefreshPeriod`, `cookie` and `expires`.
+    * Added support for local `StyleMap`. The `highlight` style is still ignored.
+    * Added support for `root://` URLs.
+    * Added more warnings for unsupported features.
+* Added `owner` property to `CompositeEntityCollection`.
+* Added `Color.add`, `Color.subtract`, `Color.multiply`, `Color.divide`, `Color.mod`, `Color.multiplyByScalar`, and `Color.divideByScalar` functions to perform arithmetic operations on colors.
+* Added `length` to `Matrix2`, `Matrix3` and `Matrix4` so these can be used as array-like objects.
+
+### 1.18 - 2016-02-01
+* Breaking changes
+    * Removed support for `CESIUM_binary_glTF`. Use `KHR_binary_glTF` instead, which is the default for the online [COLLADA-to-glTF converter](http://cesiumjs.org/convertmodel.html).
+* Deprecated
+    * Deprecated `GroundPrimitive.geometryInstance`. It will be removed in 1.20. Use `GroundPrimitive.geometryInstances` instead.
+    * Deprecated `TileMapServiceImageryProvider`. It will be removed in 1.20. Use `createTileMapServiceImageryProvider` instead.
 * Reduced the amount of CPU memory used by terrain by ~25% in Chrome.
-* Fixed a picking problem ([#3386](https://github.com/AnalyticalGraphicsInc/cesium/issues/3386)) that sometimes prevented objects being selected.
-* Added `Scene.useDepthPicking` to enable or disable picking using the depth buffer. [#3390](https://github.com/AnalyticalGraphicsInc/cesium/pull/3390)
-* Fixed a bug that prevented WMS feature picking from working with THREDDS XML and msGMLOutput in Internet Explorer 11.
-* Added `getExtensionFromUri` helper function.
-* Added `getAbsoluteUri` helper function.
+* Added a Sandcastle example to "star burst" overlapping billboards and labels.
 * Added `VRButton` which is a simple, single-button widget that toggles VR mode. It is off by default. To enable the button, set the `vrButton` option to `Viewer` to `true`. Only Cardboard for mobile is supported. More VR devices will be supported when the WebVR API is more stable.
 * Added `Scene.useWebVR` to switch the scene to use stereoscopic rendering.
 * Cesium now honors `window.devicePixelRatio` on browsers that support the CSS `imageRendering` attribute.  This greatly improves performance on mobile devices and high DPI displays by rendering at the browser-recommended resolution. This also reduces bandwidth usage and increases battery life in these cases.  To enable the previous behavior, use the following code:
@@ -19,6 +39,23 @@ Change Log
         viewer.resolutionScale = window.devicePixelRatio;
     }
     ```
+* `GroundPrimitive` now supports batching geometry for better performance.
+* Improved compatibility with glTF KHR_binary_glTF and KHR_materials_common extensions
+* Added `ImageryLayer.getViewableRectangle` to make it easy to get the effective bounds of an imagery layer.
+* Improved compatibility with glTF KHR_binary_glTF and KHR_materials_common extensions
+* Fixed a picking issue that sometimes prevented objects being selected. [#3386](https://github.com/AnalyticalGraphicsInc/cesium/issues/3386)
+* Fixed cracking between tiles in 2D. [#3486](https://github.com/AnalyticalGraphicsInc/cesium/pull/3486)
+* Fixed creating bounding volumes for `GroundPrimitive`s whose containing rectangle has a width greater than pi.
+* Fixed incorrect texture coordinates for polygons with large height.
+* Fixed camera.flyTo not working when in 2D mode and only orientation changes
+* Added `UrlTemplateImageryProvider.reinitialize` for changing imagery provider options without creating a new instance.
+* `UrlTemplateImageryProvider` now accepts a promise to an `options` object in addition to taking the object directly.
+* Fixed a bug that prevented WMS feature picking from working with THREDDS XML and msGMLOutput in Internet Explorer 11.
+* Added `Scene.useDepthPicking` to enable or disable picking using the depth buffer. [#3390](https://github.com/AnalyticalGraphicsInc/cesium/pull/3390)
+* Added `BoundingSphere.fromEncodedCartesianVertices` to create bounding volumes from parallel arrays of the upper and lower bits of `EncodedCartesian3`s.
+* Added helper functions: `getExtensionFromUri`, `getAbsoluteUri`, and `Math.logBase`.
+* Added `Rectangle.union` and `Rectangle.expand`.
+* TMS support now works with newer versions of gdal2tiles.py generated layers. `createTileMapServiceImageryProvider`.  Tilesets generated with older gdal2tiles.py versions may need to have the `flipXY : true` option set to load correctly.
 
 ### 1.17 - 2016-01-04
 

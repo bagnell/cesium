@@ -35,7 +35,7 @@ define([
         PrimitiveType,
         Rectangle,
         RectangleGeometryLibrary) {
-    "use strict";
+    'use strict';
 
     var bottomBoundingSphere = new BoundingSphere();
     var topBoundingSphere = new BoundingSphere();
@@ -182,8 +182,6 @@ define([
      * @exception {DeveloperError} <code>options.rectangle.north</code> must be greater than <code>rectangle.south</code>.
      *
      * @see RectangleOutlineGeometry#createGeometry
-     *
-     * @demo {@link http://cesiumjs.org/Cesium/Apps/Sandcastle/index.html?src=Rectangle%20Outline.html|Cesium Sandcastle Rectangle Outline Demo}
      *
      * @example
      * var rectangle = new Cesium.RectangleOutlineGeometry({

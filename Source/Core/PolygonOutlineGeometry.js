@@ -39,7 +39,7 @@ define([
         PrimitiveType,
         Queue,
         WindingOrder) {
-    "use strict";
+    'use strict';
     var createGeometryFromPositionsPositions = [];
     var createGeometryFromPositionsSubdivided = [];
 
@@ -212,8 +212,6 @@ define([
      *
      * @see PolygonOutlineGeometry#createGeometry
      * @see PolygonOutlineGeometry#fromPositions
-     *
-     * @demo {@link http://cesiumjs.org/Cesium/Apps/Sandcastle/index.html?src=Polygon%20Outline.html|Cesium Sandcastle Polygon Outline Demo}
      *
      * @example
      * // 1. create a polygon outline from points

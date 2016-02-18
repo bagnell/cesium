@@ -29,7 +29,7 @@ define([
         IndexDatatype,
         CesiumMath,
         PrimitiveType) {
-    "use strict";
+    'use strict';
 
     var scratchCartesian1 = new Cartesian3();
     var boundingSphereCenter = new Cartesian3();
@@ -149,8 +149,6 @@ define([
      * @exception {DeveloperError} granularity must be greater than zero.
      *
      * @see EllipseOutlineGeometry.createGeometry
-     *
-     * @demo {@link http://cesiumjs.org/Cesium/Apps/Sandcastle/index.html?src=Ellipse%20Outline.html|Cesium Sandcastle Ellipse Outline Demo}
      *
      * @example
      * var ellipse = new Cesium.EllipseOutlineGeometry({
