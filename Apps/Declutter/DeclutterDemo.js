@@ -219,7 +219,7 @@ require({
             }
         }
 
-        if (billboardEntities.length === 0) {
+        if (billboardEntities.length < 2) {
             return;
         }
 
@@ -234,6 +234,9 @@ require({
 
         var x;
         var y;
+
+        var minY = Number.POSITIVE_INFINITY;
+        var maxY = Number.NEGATIVE_INFINITY;
 
         var canvasHeight = scene.canvas.clientHeight;
 
@@ -265,6 +268,8 @@ require({
                 if (defined(object.id.label)) {
                     maxWidthWithLabels = Math.max(maxWidthWithLabels, labelPixelWidth(object.id));
                 }
+
+                maxY = Math.max(maxY, y);
             } else if (starBurstState.screenCenter.y + y < canvasHeight) {
                 object = billboardEntities[i];
                 offsetBillboard(object.id, object.primitive.position, x, -y, lines, billboardEyeOffsets, labelEyeOffsets);
@@ -274,6 +279,8 @@ require({
                 if (defined(object.id.label)) {
                     maxWidthWithLabels = Math.max(maxWidthWithLabels, labelPixelWidth(object.id));
                 }
+
+                minY = Math.min(minY, -y);
 
                 y += maxDimension;
             }
@@ -287,6 +294,8 @@ require({
                 if (defined(object.id.label)) {
                     maxWidthWithLabels = Math.max(maxWidthWithLabels, labelPixelWidth(object.id));
                 }
+
+                minY = Math.min(minY, -y);
             }
 
             y += maxDimension;
@@ -302,8 +311,9 @@ require({
         var rect = new BoundingRectangle();
         rect.x = starBurstState.screenCenter.x - starBurstState.pixelPadding * 2.0;
         rect.width = x + maxWidthWithLabels * 2.0;
-        rect.y = starBurstState.screenCenter.y - y - starBurstState.pixelPadding * 2.0;
-        rect.height = 2.0 * y;
+        rect.y = starBurstState.screenCenter.y - maxY - starBurstState.pixelPadding * 2.0;
+        rect.height = starBurstState.screenCenter.y - minY + starBurstState.pixelPadding * 2.0 - rect.y;
+
         starBurstState.boundingRectangle = rect;
 
 
